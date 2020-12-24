@@ -2,6 +2,7 @@
  * formula.h
  *
  * file containing the formula data type and its API
+ *
  */
 
 #ifndef FORMULA
@@ -96,5 +97,11 @@ typedef struct formula {
                                                          */
 
 } formula;
+
+/*
+ * formula data type API
+ */
+
+formula *alloc_formula();
 
 #endif

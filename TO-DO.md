@@ -1,4 +1,4 @@
 # TO-DO
 
-- [ ] Implement the "formula" data type
+- [x] Implement the *formula* data type
 - [ ] Parse formula

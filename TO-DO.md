@@ -1,4 +1,16 @@
 # TO-DO
 
 - [x] Implement the *formula* data type
-- [ ] Parse formula
+- [x] Makefile
+- [x] Parse formula
+- [x] Build CSC format
+- [x] Build CSR format
+- [x] Init decision level
+- [x] Init variables
+- [x] Init clauses
+- [x] Init literals
+- [ ] Print formula
+- [ ] Refactoring
+- [ ] Git
+- [ ] Plan next steps
+

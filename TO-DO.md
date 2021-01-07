@@ -9,8 +9,8 @@
 - [x] Init variables
 - [x] Init clauses
 - [x] Init literals
-- [ ] Print formula
-- [ ] Refactoring
-- [ ] Git
+- [x] Print formula
+- [x] Refactoring
+- [x] Git
 - [ ] Plan next steps
 

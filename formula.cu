@@ -7,6 +7,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 
 
 #include "formula.h"
@@ -14,14 +15,44 @@
 
 
 /*
- * max: returns the largest of a and b
+ * MAX: returns the largest of a and b
  */
-#define max(a,b)                 \
+#define MAX(a,b)                 \
     ({                           \
         __typeof__ (a) _a = (a); \
         __typeof__ (b) _b = (b); \
         _a > _b ? _a : _b;       \
     })
+
+
+// /*
+//  * NELEMS: determines the number of elements in the array
+//  */
+// #define NELEMS(x)   (sizeof(x) / sizeof((x)[0]))
+
+
+/*
+ * LIT_TO_IDX: converts from literal to index
+ */
+#define LIT_TO_IDX(lit, num_vars)                   \
+    ({                                              \
+        (lit) > 0 ? (lit) : -(lit) + (num_vars);    \
+    })
+
+
+/*
+ * IDX_TO_LIT: converts from index to literal
+ */
+#define IDX_TO_LIT(idx, num_vars)                               \
+    ({                                                          \
+        (idx) <= (num_vars) ? (idx) : -((idx) - (num_vars));    \
+    })
+
+
+/*
+ * LIT_TO_VAR: gets variable from literal
+ */
+#define LIT_TO_VAR(lit)   (abs(lit))
 
 
 // static limits to formula size
@@ -82,7 +113,7 @@ typedef struct formula {
      * literals
      */
     unsigned int s_num_lits;    // number of literals (static)
-    unsigned int d_num_lits;    // number of literals NOT yet assigned (dynamic)
+    unsigned int d_num_lits;    // number of literals still active (dynamic)
     unsigned int s_occ_lits[MAX_NUM_VARS * 2 + 1];  /* number of occurrences of
                                                      * literals (static)
                                                      */
@@ -139,6 +170,8 @@ static formula *f;
 int new_formula(char *filename);
 void delete_formula();
 void print_formula();
+void new_lit_assignments(int *new_lit_ass, unsigned int new_lit_ass_len);
+void backjumping(unsigned int bj_dec_lvl);
 
 
 /*****************************************************************************/
@@ -148,8 +181,6 @@ void print_formula();
  * auxiliary function prototypes
  */
 
-static unsigned int lit_to_idx(int lit, unsigned int *p_num_vars);
-static int idx_to_lit(unsigned int idx, unsigned int *p_num_vars);
 static void alloc_formula();
 static void free_formula();
 static int parse_formula(char *filename);
@@ -196,6 +227,10 @@ static void init_csr(
 static void init_vars(unsigned int num_vars);
 static void init_clauses(unsigned int num_clauses);
 static void init_lits(unsigned int num_vars, unsigned int num_lits);
+static void ass_lit_updates(int *new_lit_ass, unsigned int new_lit_ass_len);
+static void neg_lit_updates(int *new_lit_ass, unsigned int new_lit_ass_len);
+static void ass_lit_restores(int *lits_restore, unsigned int lits_restore_len, unsigned int bj_dec_lvl);
+static void neg_lit_restores(int *lits_restore, unsigned int lits_restore_len);
 
 
 /*****************************************************************************/
@@ -283,7 +318,7 @@ void print_formula() {
     printf("* literals *\n");
     printf("************\n");
     printf("number of literals (static): %u\n\n", f->s_num_lits);
-    printf("number of literals NOT yet assigned (dynamic): %u\n\n", f->d_num_lits);
+    printf("number of literals still active (dynamic): %u\n\n", f->d_num_lits);
     printf("number of occurrences of literals (static): ");
     for(unsigned int l = 1; l <= f->s_num_vars * 2; l++) {
         printf("%u ", f->s_occ_lits[l]);
@@ -333,36 +368,66 @@ void print_formula() {
 }
 
 
+/*
+ * new_lit_assignments: updates the formula data structure with the new literal
+ *                      assignments
+ */
+void new_lit_assignments(int *new_lit_ass, unsigned int new_lit_ass_len) {
+    // updates the decision level
+    f->dec_lvl++;
+
+    // assigned literal updates
+    ass_lit_updates(new_lit_ass, new_lit_ass_len);
+
+    // negated literal updates
+    neg_lit_updates(new_lit_ass, new_lit_ass_len);
+}
+
+
+/*
+ * backjumping: restores the formula data structure to the backjumping decision
+ *              level
+ */
+void backjumping(unsigned int bj_dec_lvl) {
+    // retrieves the assigned literals to be restored
+    int *lits_restore;
+    HANDLE_ERROR( cudaHostAlloc( (void**) &lits_restore,
+                                 sizeof( *lits_restore ) * MAX_NUM_VARS,
+                                 cudaHostAllocDefault ) );
+    unsigned int lits_restore_len = 0;
+
+    for(unsigned int v = 1; v <= f->s_num_vars; v++) {
+        int v_ass = f->var_ass[v];
+        unsigned int v_dec_lvl = abs(v_ass);
+
+        if(v_dec_lvl > bj_dec_lvl) {
+            if(v_ass > 0) {
+                lits_restore[lits_restore_len] = v;
+            } else {    // v_ass < 0
+                lits_restore[lits_restore_len] = -v;
+            }
+
+            lits_restore_len++;
+        }
+    }
+
+    // negated literal restores
+    neg_lit_restores(lits_restore, lits_restore_len);
+
+    // assigned literal restores
+    ass_lit_restores(lits_restore, lits_restore_len, bj_dec_lvl);
+
+    // restores the decision level
+    f->dec_lvl = bj_dec_lvl;
+}
+
+
 /*****************************************************************************/
 
 
 /*
  * auxiliary function definitions
  */
-
-/*
- * lit_to_idx: converts from literal to index
- */
-static unsigned int lit_to_idx(int lit, unsigned int *p_num_vars) {
-    if(lit > 0) {
-        return lit;
-    } else {
-        return -lit + *p_num_vars;
-    }
-}
-
-
-/*
- * idx_to_lit: converts from index to literal
- */
-static int idx_to_lit(unsigned int idx, unsigned int *p_num_vars) {
-    if(idx <= *p_num_vars) {
-        return idx;
-    } else {
-        return -(idx - *p_num_vars);
-    }
-}
-
 
 /*
  * alloc_formula: allocates the empty formula on the host memory
@@ -519,14 +584,14 @@ static void parse_lit(
     }
 
     (*num_lits)++;
-    *num_vars = max(*num_vars, lit);
+    *num_vars = MAX(*num_vars, lit);
 
     if(d == '0') {
         lit *= -1;
-        unsigned int idx = lit_to_idx(lit, p_num_vars);
+        unsigned int idx = LIT_TO_IDX(lit, *p_num_vars);
         (*f_mat)[*num_clauses][idx] = 1;
     } else {
-        unsigned int idx = lit_to_idx(lit, p_num_vars);
+        unsigned int idx = LIT_TO_IDX(lit, *p_num_vars);
         (*f_mat)[*num_clauses][idx] = 1;
     }
 }
@@ -635,6 +700,139 @@ static void init_lits(unsigned int num_vars, unsigned int num_lits) {
 
     for(unsigned int l = 1; l <= num_vars * 2; l++) {
         f->s_occ_lits[l] = f->d_occ_lits[l] = f->csc_col_ptr[l+1] - f->csc_col_ptr[l];
+    }
+}
+
+
+/*
+ * ass_lit_updates: updates the formula data structure based on the newly assigned
+ *                  literals
+ */
+static void ass_lit_updates(int *new_lit_ass, unsigned int new_lit_ass_len) {
+    for(unsigned int l = 0; l < new_lit_ass_len; l++) {
+        // updates the variable assignments and the number of variables NOT yet
+        // assigned
+        int new_lit = new_lit_ass[l];
+        unsigned int var = LIT_TO_VAR(new_lit);
+
+        if(new_lit > 0) {
+            f->var_ass[var] = f->dec_lvl;
+        } else {    // new_lit < 0
+            f->var_ass[var] = -(f->dec_lvl);
+        }
+
+        f->d_num_vars--;
+
+        // updates the satisfiability of clauses and the number of clauses NOT
+        // yet satisfied
+        unsigned int new_lit_idx = LIT_TO_IDX(new_lit, f->s_num_vars);
+        unsigned int clause_start_idx = f->csc_col_ptr[new_lit_idx];
+
+        for(unsigned int clause_off = 0; clause_off < f->s_occ_lits[new_lit_idx]; clause_off++) {
+            unsigned int clause_idx = f->csc_row_ind[clause_start_idx + clause_off];
+
+            if(!(f->clause_sat[clause_idx])) {
+                f->clause_sat[clause_idx] = f->dec_lvl;
+                f->d_num_clauses--;
+                
+                // updates the number of occurrences of literals and the number
+                // of literals still active
+                unsigned int lit_start_idx = f->csr_row_ptr[clause_idx];
+
+                for(unsigned int lit_off = 0; lit_off < f->s_clause_len[clause_idx]; lit_off++) {
+                    unsigned int lit_idx = f->csr_col_ind[lit_start_idx + lit_off];
+                    f->d_occ_lits[lit_idx]--;
+                    f->d_num_lits--;
+                }
+            }
+        }
+    }
+}
+
+
+/*
+ * neg_lit_updates: updates the formula data structure based on the negates of
+ *                  the newly assigned literals
+ */
+static void neg_lit_updates(int *new_lit_ass, unsigned int new_lit_ass_len) {
+    for(unsigned int l = 0; l < new_lit_ass_len; l++) {
+        // updates the clause lengths and the number of literals still active
+        int neg_lit = -new_lit_ass[l];
+        unsigned int neg_lit_idx = LIT_TO_IDX(neg_lit, f->s_num_vars);
+        unsigned int clause_start_idx = f->csc_col_ptr[neg_lit_idx];
+
+        for(unsigned int clause_off = 0; clause_off < f->s_occ_lits[neg_lit_idx]; clause_off++) {
+            unsigned int clause_idx = f->csc_row_ind[clause_start_idx + clause_off];
+
+            if(!(f->clause_sat[clause_idx])) {
+                f->d_clause_len[clause_idx]--;
+                f->d_num_lits--;
+            }
+        }
+    }
+}
+
+
+/*
+ * ass_lit_restores: restores the formula data structure based on the assigned
+ *                   literals
+ */
+static void ass_lit_restores(int *lits_restore, unsigned int lits_restore_len, unsigned int bj_dec_lvl) {
+    for(unsigned int l = 0; l < lits_restore_len; l++) {
+        // restores the number of occurrences of literals and the number of
+        // literals still active
+        int res_lit = lits_restore[l];
+        unsigned int res_lit_idx = LIT_TO_IDX(res_lit, f->s_num_vars);
+        unsigned int clause_start_idx = f->csc_col_ptr[res_lit_idx];
+
+        for(unsigned int clause_off = 0; clause_off < f->s_occ_lits[res_lit_idx]; clause_off++) {
+            unsigned int clause_idx = f->csc_row_ind[clause_start_idx + clause_off];
+
+            if(f->clause_sat[clause_idx] > bj_dec_lvl) {
+                unsigned int lit_start_idx = f->csr_row_ptr[clause_idx];
+
+                for(unsigned int lit_off = 0; lit_off < f->s_clause_len[clause_idx]; lit_off++) {
+                    unsigned int lit_idx = f->csr_col_ind[lit_start_idx + lit_off];
+                    f->d_occ_lits[lit_idx]++;
+                    f->d_num_lits++;
+                }
+
+                // restores the satisfiability of clauses and the number of
+                // clauses NOT yet satisfied
+                f->clause_sat[clause_idx] = 0;
+                f->d_num_clauses++;
+            }
+        }
+
+        // restores the variable assignments and the number of variables NOT
+        // yet assigned
+        unsigned int var = LIT_TO_VAR(res_lit);
+        f->var_ass[var] = 0;
+        f->d_num_vars++;
+    }
+}
+
+
+/*
+ * neg_lit_restores: restores the formula data structure based on the negates
+ *                   of the assigned literals
+ */
+static void neg_lit_restores(int *lits_restore, unsigned int lits_restore_len) {
+    for(unsigned int l = 0; l < lits_restore_len; l++) {
+        // restores the clause lengths and the number of literals still active
+        int neg_lit = -lits_restore[l];
+        unsigned int var = LIT_TO_VAR(neg_lit);
+        unsigned int neg_lit_idx = LIT_TO_IDX(neg_lit, f->s_num_vars);
+        unsigned int clause_start_idx = f->csc_col_ptr[neg_lit_idx];
+
+        for(unsigned int clause_off = 0; clause_off < f->s_occ_lits[neg_lit_idx]; clause_off++) {
+            unsigned int clause_idx = f->csc_row_ind[clause_start_idx + clause_off];
+
+            if(!(f->clause_sat[clause_idx]) || f->clause_sat[clause_idx] > abs(f->var_ass[var])) {
+                f->d_clause_len[clause_idx]++;
+                f->d_num_lits++;
+            }
+        }
     }
 }
 

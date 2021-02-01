@@ -14,8 +14,34 @@
 
 
 /*
+ * auxiliary macro function definitions
+ */
+
+
+/*
+ * MAX: returns the largest of a and b
+ */
+#define MAX(a,b)                 \
+    ({                           \
+        __typeof__ (a) _a = (a); \
+        __typeof__ (b) _b = (b); \
+        _a > _b ? _a : _b;       \
+    })
+
+
+// /*
+//  * NELEMS: determines the number of elements in the array
+//  */
+// #define NELEMS(x)   (sizeof(x) / sizeof((x)[0]))
+
+
+/*****************************************************************************/
+
+
+/*
  * error handling function definitions
  */
+
 
 static void HandleError( cudaError_t err,
                          const char *file,
@@ -37,6 +63,9 @@ static void HandleError( cudaError_t err,
             exit( EXIT_FAILURE );                               \
         }                                                       \
     }
+
+
+/*****************************************************************************/
 
 
 #endif

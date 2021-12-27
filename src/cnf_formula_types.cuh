@@ -10,6 +10,7 @@
 
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 
 /**
@@ -57,6 +58,13 @@ inline __host__ __device__ Lidx varpol_to_lidx(Var var, bool polarity) {
 }
 
 
+/**
+ * @brief Gets the literal from a variable and a polarity.
+ * 
+ * @param [in]var A variable.
+ * @param [in]polarity A polarity.
+ * @retval The literal.
+ */
 inline __host__ __device__ Lit varpol_to_lit(Var var, bool polarity) {
     return (Lit)(polarity ? var + 1 : -(var + 1));
 }

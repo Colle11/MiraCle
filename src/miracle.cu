@@ -198,13 +198,13 @@ void mrc_print_miracle(Miracle *mrc) {
 
     printf("Variable assignments: ");
     for (int v = 0; v < mrc->var_ass_len; v++) {
-        printf("%d ", mrc->var_ass[v]);
+        printf("[%d]%d ", v, mrc->var_ass[v]);
     }
     printf("\n");
 
     printf("Clause satisfiability: ");
     for (int c = 0; c < mrc->clause_sat_len; c++) {
-        printf("%d ", mrc->clause_sat[c]);
+        printf("[%d]%d ", c, mrc->clause_sat[c]);
     }
     printf("\n");
 

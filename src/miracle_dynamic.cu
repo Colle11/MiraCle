@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include <limits.h>
+#include <string.h>
 
 
 #include "miracle_dynamic.cuh"

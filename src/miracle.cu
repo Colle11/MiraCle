@@ -287,6 +287,8 @@ Lit mrc_RAND_heuristic(Miracle *mrc) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"mrc_RAND_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -430,6 +432,8 @@ Lit mrc_BOHM_heuristic(Miracle *mrc, const int alpha, const int beta) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"mrc_BOHM_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -525,6 +529,8 @@ Lit mrc_POSIT_heuristic(Miracle *mrc, const int n) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"mrc_POSIT_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -675,6 +681,8 @@ static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"JW_xS_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -732,6 +740,8 @@ static Lit DLxS_heuristic(Miracle *mrc, bool dlcs) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"DLxS_heuristic\".\n");
         exit(EXIT_FAILURE);

@@ -804,6 +804,14 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
                           sizeof lc_i_neg_lidx,
                           cudaMemcpyDeviceToHost) );
 
+    if ((lc_i_pos_lidx == lc_i_neg_lidx) && (lc_i_pos_lidx == 0)) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"mrc_gpu_BOHM_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
+
     return lc_i_pos_lidx >= lc_i_neg_lidx ? lidx_to_lit(pos_lidx) :
                                             lidx_to_lit(neg_lidx);
 }
@@ -865,6 +873,14 @@ Lit mrc_gpu_POSIT_heuristic(Miracle *d_mrc, const int n) {
     gpuErrchk( cudaMemcpy(&lo_min_neg_lidx, &(dev_lit_occ[neg_lidx]),
                           sizeof lo_min_neg_lidx,
                           cudaMemcpyDeviceToHost) );
+
+    if ((lo_min_pos_lidx == lo_min_neg_lidx) && (lo_min_pos_lidx == 0)) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"mrc_gpu_POSIT_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
 
     return lo_min_pos_lidx >= lo_min_neg_lidx ? lidx_to_lit(neg_lidx) :
                                                 lidx_to_lit(pos_lidx);
@@ -1073,9 +1089,30 @@ static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
                               sizeof lw_neg_lidx,
                               cudaMemcpyDeviceToHost) );
 
+        if ((lw_pos_lidx == lw_neg_lidx) && (lw_pos_lidx == 0)) {
+            // return UNDEF_LIT;
+
+            fprintf(stderr, "Undefined branching literal in function "
+                "\"JW_xS_heuristic\".\n");
+            exit(EXIT_FAILURE);
+        }
+
         blidx = lw_pos_lidx >= lw_neg_lidx ? pos_lidx : neg_lidx;
     } else {
         blidx = (Lidx)find_idx_max_float(dev_lit_weights, lit_weights_len);
+
+        float lw_blidx;
+        gpuErrchk( cudaMemcpy(&lw_blidx, &(dev_lit_weights[blidx]),
+                              sizeof lw_blidx,
+                              cudaMemcpyDeviceToHost) );
+
+        if (lw_blidx == 0) {
+            // return UNDEF_LIT;
+
+            fprintf(stderr, "Undefined branching literal in function "
+                "\"JW_xS_heuristic\".\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     return lidx_to_lit(blidx);
@@ -1124,9 +1161,30 @@ static Lit DLxS_heuristic(Miracle *d_mrc, bool dlcs) {
                               sizeof lo_neg_lidx,
                               cudaMemcpyDeviceToHost) );
 
+        if ((lo_pos_lidx == lo_neg_lidx) && (lo_pos_lidx == 0)) {
+            // return UNDEF_LIT;
+
+            fprintf(stderr, "Undefined branching literal in function "
+                "\"DLxS_heuristic\".\n");
+            exit(EXIT_FAILURE);
+        }
+
         blidx = lo_pos_lidx >= lo_neg_lidx ? pos_lidx : neg_lidx;
     } else {
         blidx = (Lidx)find_idx_max_int(dev_lit_occ, lit_occ_len);
+
+        int lo_blidx;
+        gpuErrchk( cudaMemcpy(&lo_blidx, &(dev_lit_occ[blidx]),
+                              sizeof lo_blidx,
+                              cudaMemcpyDeviceToHost) );
+
+        if (lo_blidx == 0) {
+            // return UNDEF_LIT;
+
+            fprintf(stderr, "Undefined branching literal in function "
+                "\"DLxS_heuristic\".\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
     return lidx_to_lit(blidx);

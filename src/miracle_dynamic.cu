@@ -319,7 +319,7 @@ void mrc_dyn_print_miracle(Miracle_Dyn *mrc_dyn) {
 
     printf("Variable assignments: ");
     for (int v = 0; v < mrc_dyn->var_ass_len; v++) {
-        printf("%d ", mrc_dyn->var_ass[v]);
+        printf("[%d]%d ", v, mrc_dyn->var_ass[v]);
     }
     printf("\n");
 
@@ -327,7 +327,7 @@ void mrc_dyn_print_miracle(Miracle_Dyn *mrc_dyn) {
 
     printf("Clause satisfiability: ");
     for (int c = 0; c < mrc_dyn->clause_sat_len; c++) {
-        printf("%d ", mrc_dyn->clause_sat[c]);
+        printf("[%d]%d ", c, mrc_dyn->clause_sat[c]);
     }
     printf("\n");
 
@@ -335,13 +335,13 @@ void mrc_dyn_print_miracle(Miracle_Dyn *mrc_dyn) {
 
     printf("Clause initial sizes: ");
     for (int c = 0; c < mrc_dyn->clause_size_len; c++) {
-        printf("%d ", mrc_dyn->clause_size[c]);
+        printf("[%d]%d ", c, mrc_dyn->clause_size[c]);
     }
     printf("\n");
 
     printf("Unresolved clause current sizes: ");
     for (int c = 0; c < mrc_dyn->clause_size_len; c++) {
-        printf("%d ", mrc_dyn->unres_clause_size[c]);
+        printf("[%d]%d ", c, mrc_dyn->unres_clause_size[c]);
     }
     printf("\n");
 
@@ -349,13 +349,13 @@ void mrc_dyn_print_miracle(Miracle_Dyn *mrc_dyn) {
 
     printf("Literal initial occurrences: ");
     for (int l = 0; l < mrc_dyn->lit_occ_len; l++) {
-        printf("%d ", mrc_dyn->lit_occ[l]);
+        printf("[%d]%d ", l, mrc_dyn->lit_occ[l]);
     }
     printf("\n");
 
     printf("Unresolved literal current occurrences: ");
     for (int l = 0; l < mrc_dyn->lit_occ_len; l++) {
-        printf("%d ", mrc_dyn->unres_lit_occ[l]);
+        printf("[%d]%d ", l, mrc_dyn->unres_lit_occ[l]);
     }
     printf("\n");
 
@@ -363,13 +363,13 @@ void mrc_dyn_print_miracle(Miracle_Dyn *mrc_dyn) {
 
     printf("csc_col_ptr: ");
     for (int l = 0; l < mrc_dyn->csc_col_ptr_len; l++) {
-        printf("%d ", mrc_dyn->csc_col_ptr[l]);
+        printf("[%d]%d ", l, mrc_dyn->csc_col_ptr[l]);
     }
     printf("\n");
 
     printf("csc_row_ind: ");
     for (int c = 0; c < mrc_dyn->csc_row_ind_len; c++) {
-        printf("%d ", mrc_dyn->csc_row_ind[c]);
+        printf("[%d]%d ", c, mrc_dyn->csc_row_ind[c]);
     }
     printf("\n");
 

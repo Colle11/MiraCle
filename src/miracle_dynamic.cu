@@ -433,6 +433,8 @@ Lit mrc_dyn_RAND_heuristic(Miracle_Dyn *mrc_dyn) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"mrc_dyn_RAND_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -564,6 +566,8 @@ Lit mrc_dyn_BOHM_heuristic(Miracle_Dyn *mrc_dyn,
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"mrc_dyn_BOHM_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -659,6 +663,8 @@ Lit mrc_dyn_POSIT_heuristic(Miracle_Dyn *mrc_dyn, const int n) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"mrc_dyn_POSIT_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -958,6 +964,8 @@ static Lit JW_xS_heuristic(Miracle_Dyn *mrc_dyn, bool two_sided) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"JW_xS_heuristic\".\n");
         exit(EXIT_FAILURE);
@@ -1002,6 +1010,8 @@ static Lit DLxS_heuristic(Miracle_Dyn *mrc_dyn, bool dlcs) {
     }
 
     if (bvar == UNDEF_VAR) {
+        // return UNDEF_LIT;
+
         fprintf(stderr, "Undefined variable \"bvar\" in function "
                 "\"DLxS_heuristic\".\n");
         exit(EXIT_FAILURE);

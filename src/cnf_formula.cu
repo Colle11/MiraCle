@@ -178,13 +178,13 @@ void cnf_print_formula(CNF_Formula *phi) {
 
     printf("Clause indices: ");
     for (int i = 0; i < phi->clause_indices_len; i++) {
-        printf("%d ", phi->clause_indices[i]);
+        printf("[%d]%d ", i, phi->clause_indices[i]);
     }
     printf("\n");
 
     printf("Clauses: ");
     for (int l = 0; l < phi->clauses_len; l++) {
-        printf("%d ", phi->clauses[l]);
+        printf("[%d]%d ", l, phi->clauses[l]);
     }
     printf("\n");
 

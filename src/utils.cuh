@@ -47,7 +47,8 @@ static bool init_PRNG_seed = false;     /**
  * @param [in]ans A CUDA API call.
  * @retval None.
  */
-#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+// #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+#define gpuErrchk(ans) { (ans); }
 
 
 /**

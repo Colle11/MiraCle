@@ -13,6 +13,10 @@
 #include <time.h>
 
 
+// #include "miracle.cuh"
+// #include "miracle_dynamic.cuh"
+
+
 /**
  * Global variables
  */
@@ -185,6 +189,16 @@ __host__ cudaError_t cuda_memset_int(int *devPtr,
 __host__ cudaError_t cuda_memset_float(float *devPtr,
                                        float value,
                                        unsigned int count);
+
+
+/**
+ * @brief Prints debug information about a Miracle and a Miracle_Dyn.
+ * 
+ * @param [in]mrc A miracle.
+ * @param [in]mrc_dyn A dynamic miracle.
+ * @retval None.
+ */
+// void print_mrc_vs_mrcdyn_debug_info(Miracle *mrc, Miracle_Dyn *mrc_dyn);
 
 
 #endif

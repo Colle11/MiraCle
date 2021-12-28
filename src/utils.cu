@@ -14,6 +14,8 @@
 
 #include "utils.cuh"
 #include "launch_parameters_gpu.cuh"
+// #include "miracle.cuh"
+// #include "miracle_dynamic.cuh"
 
 
 /**
@@ -410,6 +412,145 @@ __host__ cudaError_t cuda_memset_float(float *devPtr,
 
     return code;
 }
+
+
+// void print_mrc_vs_mrcdyn_debug_info(Miracle *mrc, Miracle_Dyn *mrc_dyn) {
+//     printf("****************************************************************");
+//     printf("\n");
+//     printf("*********************    DEBUG INFO    *************************");
+//     printf("\n");
+//     printf("****************************************************************");
+//     printf("\n\n");
+
+//     mrc_print_miracle(mrc);
+
+//     printf("****************************************************************");
+//     printf("\n\n");
+
+//     mrc_dyn_print_miracle(mrc_dyn);
+
+//     printf("****************************************************************");
+//     printf("\n\n");
+
+//     printf("*** Correctness test ***\n\n");
+
+//     printf("*** Variable assignments test ***\n\n");
+
+//     for (Var v = 0; v < mrc->var_ass_len; v++) {
+//         if (mrc->var_ass[v] != mrc_dyn->var_ass[v]) {
+//             printf("mrc->var_ass[%d] = %d", v, mrc->var_ass[v]);
+//             printf("    !=    ");
+//             printf("mrc_dyn->var_ass[%d] = %d\n", v, mrc_dyn->var_ass[v]);
+//             exit(EXIT_FAILURE);
+//         }
+//     }
+
+//     printf("OK!\n");
+
+//     printf("\n*** End variable assignments test ***\n\n");
+
+//     printf("*** Clause satisfiability test ***\n\n");
+
+//     for (int c = 0; c < mrc->clause_sat_len; c++) {
+//         if (mrc->clause_sat[c] != mrc_dyn->clause_sat[c]) {
+//             printf("mrc->clause_sat[%d] = %d", c, mrc->clause_sat[c]);
+//             printf("    !=    ");
+//             printf("mrc_dyn->clause_sat[%d] = %d\n", c, mrc_dyn->clause_sat[c]);
+//             exit(EXIT_FAILURE);
+//         }
+//     }
+
+//     printf("OK!\n");
+
+//     printf("\n*** End clause satisfiability test ***\n\n");
+
+//     printf("*** Unresolved clause current sizes test ***\n\n");
+
+//     int c_size;     // Clause size.
+//     Lidx lidx;
+//     Var var;
+//     // Array of clause current sizes derived from mrc.
+//     int *clause_sizes = (int *)malloc(sizeof *clause_sizes *
+//                                       mrc->phi->num_clauses);
+
+//     for (int c = 0; c < mrc->clause_sat_len; c++) {
+//         c_size = 0;
+
+//         if (!(mrc->clause_sat[c])) {
+//             for (int l = mrc->phi->clause_indices[c];
+//                  l < mrc->phi->clause_indices[c+1];
+//                  l++) {
+//                 lidx = mrc->phi->clauses[l];
+//                 var = lidx_to_var(lidx);
+
+//                 if (!(mrc->var_ass[var])) {
+//                     c_size++;
+//                 }
+//             }
+//         }
+
+//         clause_sizes[c] = c_size;
+//     }
+
+//     for (int c = 0; c < mrc_dyn->clause_size_len; c++) {
+//         if (!mrc->clause_sat[c] &&
+//             (clause_sizes[c] != mrc_dyn->unres_clause_size[c])) {
+//                 printf("clause_sizes[%d] = %d", c, clause_sizes[c]);
+//                 printf("    !=    ");
+//                 printf("mrc_dyn->unres_clause_size[%d] = %d\n",
+//                        c, mrc_dyn->unres_clause_size[c]);
+//                 exit(EXIT_FAILURE);
+//         }
+//     }
+
+//     printf("OK!\n");
+
+//     printf("\n*** End unresolved clause current sizes test ***\n\n");
+
+//     printf("*** Unresolved literal current occurrences test ***\n\n");
+
+//     // Array of literal current occurrences derived from mrc.
+//     int *lit_occ = (int *)calloc(mrc->phi->num_vars * 2, sizeof *lit_occ);
+
+//     for (int c = 0; c < mrc->clause_sat_len; c++) {
+//         if (!(mrc->clause_sat[c])) {
+//             for (int l = mrc->phi->clause_indices[c];
+//                  l < mrc->phi->clause_indices[c+1];
+//                  l++) {
+//                 lidx = mrc->phi->clauses[l];
+//                 var = lidx_to_var(lidx);
+
+//                 if (!(mrc->var_ass[var])) {
+//                     lit_occ[lidx]++;
+//                 }
+//             }
+//         }
+//     }
+
+//     for (int l = 0; l < mrc_dyn->lit_occ_len; l++) {
+//         if (!mrc->var_ass[lidx_to_var(l)] &&
+//             (lit_occ[l] != mrc_dyn->unres_lit_occ[l])) {
+//                 printf("lit_occ[%d] = %d", l, lit_occ[l]);
+//                 printf("    !=    ");
+//                 printf("mrc_dyn->unres_lit_occ[%d] = %d\n",
+//                        l, mrc_dyn->unres_lit_occ[l]);
+//                 exit(EXIT_FAILURE);
+//         }
+//     }
+
+//     printf("OK!\n");
+
+//     printf("\n*** End unresolved literal current occurrences test ***\n\n");
+
+//     printf("*** End correctness test ***\n\n");
+
+//     printf("****************************************************************");
+//     printf("\n");
+//     printf("********************    END DEBUG INFO    **********************");
+//     printf("\n");
+//     printf("****************************************************************");
+//     printf("\n\n");
+// }
 
 
 /**

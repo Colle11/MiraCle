@@ -1078,6 +1078,15 @@ static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
         gpuErrchk( cudaPeekAtLastError() );
 
         Var bvar = (Var)find_idx_max_float(dev_var_weights, var_weights_len);
+
+        if (bvar == -1) {
+            // return UNDEF_LIT;
+
+            fprintf(stderr, "Undefined branching literal in function "
+                    "\"JW_xS_heuristic\".\n");
+            exit(EXIT_FAILURE);
+        }
+
         Lidx pos_lidx = varpol_to_lidx(bvar, true);
         Lidx neg_lidx = varpol_to_lidx(bvar, false);
         float lw_pos_lidx;
@@ -1088,14 +1097,6 @@ static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
         gpuErrchk( cudaMemcpy(&lw_neg_lidx, &(dev_lit_weights[neg_lidx]),
                               sizeof lw_neg_lidx,
                               cudaMemcpyDeviceToHost) );
-
-        if ((lw_pos_lidx == lw_neg_lidx) && (lw_pos_lidx == 0)) {
-            // return UNDEF_LIT;
-
-            fprintf(stderr, "Undefined branching literal in function "
-                "\"JW_xS_heuristic\".\n");
-            exit(EXIT_FAILURE);
-        }
 
         blidx = lw_pos_lidx >= lw_neg_lidx ? pos_lidx : neg_lidx;
     } else {
@@ -1365,14 +1366,20 @@ __global__ void JW_TS_weigh_vars_unres_clauses_krn(Miracle *mrc) {
     int var_weights_lgth = d_var_weights_len;
     Lidx pos_lidx;
     Lidx neg_lidx;
+    float weight_pos_lidx;
+    float weight_neg_lidx;
 
     while (gid < var_weights_lgth) {
         if (!(mrc->var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
+            weight_pos_lidx = d_lit_weights[pos_lidx];
+            weight_neg_lidx = d_lit_weights[neg_lidx];
 
-            d_var_weights[gid] = abs(d_lit_weights[pos_lidx] -
-                                     d_lit_weights[neg_lidx]);
+            if (weight_pos_lidx > 0 || weight_neg_lidx > 0) {
+                d_var_weights[gid] = abs(weight_pos_lidx -
+                                         weight_neg_lidx);
+            }
         }
 
         gid += stride;

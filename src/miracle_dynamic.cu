@@ -415,6 +415,14 @@ void mrc_dyn_backjump(int bj_dec_lvl, Miracle_Dyn *mrc_dyn) {
 
 
 Lit mrc_dyn_RAND_heuristic(Miracle_Dyn *mrc_dyn) {
+    if (mrc_dyn->num_unres_clauses == 0) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"mrc_dyn_RAND_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
+
     init_PRNG();
 
     int random = rand() % mrc_dyn->num_unass_vars;
@@ -433,11 +441,11 @@ Lit mrc_dyn_RAND_heuristic(Miracle_Dyn *mrc_dyn) {
     }
 
     if (bvar == UNDEF_VAR) {
-        return UNDEF_LIT;
+        // return UNDEF_LIT;
 
-        // fprintf(stderr, "Undefined variable \"bvar\" in function "
-        //         "\"mrc_dyn_RAND_heuristic\".\n");
-        // exit(EXIT_FAILURE);
+        fprintf(stderr, "Undefined variable \"bvar\" in function "
+                "\"mrc_dyn_RAND_heuristic\".\n");
+        exit(EXIT_FAILURE);
     }
 
     // Polarity Selection Heuristic.
@@ -458,6 +466,14 @@ Lit mrc_dyn_JW_TS_heuristic(Miracle_Dyn *mrc_dyn) {
 Lit mrc_dyn_BOHM_heuristic(Miracle_Dyn *mrc_dyn,
                            const int alpha,
                            const int beta) {
+    if (mrc_dyn->num_unres_clauses == 0) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"mrc_dyn_BOHM_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
+
     // Init var_availability.
     for (Var v = 0; v < var_availability_len; v++) {
         var_availability[v] = !((bool)mrc_dyn->var_ass[v]);
@@ -566,11 +582,11 @@ Lit mrc_dyn_BOHM_heuristic(Miracle_Dyn *mrc_dyn,
     }
 
     if (bvar == UNDEF_VAR) {
-        return UNDEF_LIT;
+        // return UNDEF_LIT;
 
-        // fprintf(stderr, "Undefined variable \"bvar\" in function "
-        //         "\"mrc_dyn_BOHM_heuristic\".\n");
-        // exit(EXIT_FAILURE);
+        fprintf(stderr, "Undefined variable \"bvar\" in function "
+                "\"mrc_dyn_BOHM_heuristic\".\n");
+        exit(EXIT_FAILURE);
     }
 
     pos_lidx = varpol_to_lidx(bvar, true);
@@ -585,6 +601,14 @@ Lit mrc_dyn_BOHM_heuristic(Miracle_Dyn *mrc_dyn,
 
 
 Lit mrc_dyn_POSIT_heuristic(Miracle_Dyn *mrc_dyn, const int n) {
+    if (mrc_dyn->num_unres_clauses == 0) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"mrc_dyn_POSIT_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
+
     // Compute the smallest clause size.
     int c_size;     // Clause size.
     int smallest_c_size = INT_MAX;      // Smallest clause size.
@@ -663,11 +687,11 @@ Lit mrc_dyn_POSIT_heuristic(Miracle_Dyn *mrc_dyn, const int n) {
     }
 
     if (bvar == UNDEF_VAR) {
-        return UNDEF_LIT;
+        // return UNDEF_LIT;
 
-        // fprintf(stderr, "Undefined variable \"bvar\" in function "
-        //         "\"mrc_dyn_POSIT_heuristic\".\n");
-        // exit(EXIT_FAILURE);
+        fprintf(stderr, "Undefined variable \"bvar\" in function "
+                "\"mrc_dyn_POSIT_heuristic\".\n");
+        exit(EXIT_FAILURE);
     }
 
     // Polarity Selection Heuristic.
@@ -907,6 +931,14 @@ static void restores_assigned_lits(int bj_dec_lvl, Miracle_Dyn *mrc_dyn) {
 
 
 static Lit JW_xS_heuristic(Miracle_Dyn *mrc_dyn, bool two_sided) {
+    if (mrc_dyn->num_unres_clauses == 0) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"JW_xS_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
+
     Lidx pos_lidx;
     Lidx neg_lidx;
     int clause;
@@ -949,28 +981,30 @@ static Lit JW_xS_heuristic(Miracle_Dyn *mrc_dyn, bool two_sided) {
                 }
             }
 
-            weight = two_sided ? abs(weight_pos_lidx - weight_neg_lidx) :
-                                 (weight_pos_lidx >= weight_neg_lidx ?
-                                  weight_pos_lidx : weight_neg_lidx);
+            if (weight_pos_lidx > 0 || weight_neg_lidx > 0) {
+                weight = two_sided ? abs(weight_pos_lidx - weight_neg_lidx) :
+                                     (weight_pos_lidx >= weight_neg_lidx ?
+                                      weight_pos_lidx : weight_neg_lidx);
 
-            if (weight > greatest_weight) {
-                bvar = v;
-                bvar_weight_pos_lidx = weight_pos_lidx;
-                bvar_weight_neg_lidx = weight_neg_lidx;
-                greatest_weight = weight;
+                if (weight > greatest_weight) {
+                    bvar = v;
+                    bvar_weight_pos_lidx = weight_pos_lidx;
+                    bvar_weight_neg_lidx = weight_neg_lidx;
+                    greatest_weight = weight;
+                }
+
+                weight_pos_lidx = 0;
+                weight_neg_lidx = 0;
             }
-
-            weight_pos_lidx = 0;
-            weight_neg_lidx = 0;
         }
     }
 
     if (bvar == UNDEF_VAR) {
-        return UNDEF_LIT;
+        // return UNDEF_LIT;
 
-        // fprintf(stderr, "Undefined variable \"bvar\" in function "
-        //         "\"JW_xS_heuristic\".\n");
-        // exit(EXIT_FAILURE);
+        fprintf(stderr, "Undefined variable \"bvar\" in function "
+                "\"JW_xS_heuristic\".\n");
+        exit(EXIT_FAILURE);
     }
 
     // Polarity Selection Heuristic.
@@ -980,6 +1014,14 @@ static Lit JW_xS_heuristic(Miracle_Dyn *mrc_dyn, bool two_sided) {
 
 
 static Lit DLxS_heuristic(Miracle_Dyn *mrc_dyn, bool dlcs) {
+    if (mrc_dyn->num_unres_clauses == 0) {
+        // return UNDEF_LIT;
+
+        fprintf(stderr, "Undefined branching literal in function "
+                "\"DLxS_heuristic\".\n");
+        exit(EXIT_FAILURE);
+    }
+
     Lidx pos_lidx;
     Lidx neg_lidx;
     int ulo_pos_lidx;
@@ -1012,11 +1054,11 @@ static Lit DLxS_heuristic(Miracle_Dyn *mrc_dyn, bool dlcs) {
     }
 
     if (bvar == UNDEF_VAR) {
-        return UNDEF_LIT;
+        // return UNDEF_LIT;
 
-        // fprintf(stderr, "Undefined variable \"bvar\" in function "
-        //         "\"DLxS_heuristic\".\n");
-        // exit(EXIT_FAILURE);
+        fprintf(stderr, "Undefined variable \"bvar\" in function "
+                "\"DLxS_heuristic\".\n");
+        exit(EXIT_FAILURE);
     }
 
     // Polarity Selection Heuristic.

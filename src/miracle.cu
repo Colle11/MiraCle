@@ -669,13 +669,16 @@ static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided) {
             neg_lidx = varpol_to_lidx(v, false);
             weight_pos_lidx = lit_weights[pos_lidx];
             weight_neg_lidx = lit_weights[neg_lidx];
-            weight = two_sided ? abs(weight_pos_lidx - weight_neg_lidx) :
-                                 (weight_pos_lidx >= weight_neg_lidx ?
-                                  weight_pos_lidx : weight_neg_lidx);
 
-            if (weight > greatest_weight) {
-                bvar = v;
-                greatest_weight = weight;
+            if (weight_pos_lidx > 0 || weight_neg_lidx > 0) {
+                weight = two_sided ? abs(weight_pos_lidx - weight_neg_lidx) :
+                                     (weight_pos_lidx >= weight_neg_lidx ?
+                                      weight_pos_lidx : weight_neg_lidx);
+
+                if (weight > greatest_weight) {
+                    bvar = v;
+                    greatest_weight = weight;
+                }
             }
         }
     }

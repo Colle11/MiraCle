@@ -138,6 +138,10 @@ void mrc_dyn_print_miracle(Miracle_Dyn *mrc_dyn);
 
 /**
  * @brief Assigns literals in a dynamic miracle.
+ * NOTE: To ensure the correctness of a Miracle_Dyn struct, the literal
+ * assignments at each level must be done in one-shot with a SINGLE call to
+ * mrc_dyn_assign_lits. This is due to how the struct and functions to update
+ * it are designed.
  * 
  * @param [in]lits An array of assigned literals.
  * @param [in]lits_len Length of lits, which is the number of assigned

@@ -76,6 +76,15 @@ static int *dev_blk_num;                /**
                                          * terminating.
                                          */
 
+__device__ int *d_int_res;              /**
+                                         * Integer device result (pointer on
+                                         * the device).
+                                         */
+static int *dev_int_res;                /**
+                                         * Integer device result (pointer on
+                                         * the host).
+                                         */
+
 
 /**
  * Kernels
@@ -89,14 +98,11 @@ static int *dev_blk_num;                /**
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of positive ints.
  * @param [in]data_len Length of data.
- * @param [out]idx_max_int The device index of the maximum int in data. -1 if
- * all ints in data are negative.
  * @retval None.
  */
 __global__ void find_idx_max_int_krn(int num_thds_per_blk,
                                      int *data,
-                                     int data_len,
-                                     int *idx_max_int);
+                                     int data_len);
 
 
 /**
@@ -222,18 +228,18 @@ void init_utils_data_structs(int data_len) {
                                   sizeof dev_blk_num, 0UL,
                                   cudaMemcpyHostToDevice) );
     gpuErrchk( cudaMemset(dev_blk_num, 0, sizeof *dev_blk_num) );
+
+    gpuErrchk( cudaMalloc((void**)&dev_int_res,
+                          sizeof *dev_int_res) );
+    gpuErrchk( cudaMemcpyToSymbol(d_int_res, &dev_int_res,
+                                  sizeof dev_int_res, 0UL,
+                                  cudaMemcpyHostToDevice) );
 }
 
 
 int find_idx_max_int(int *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
-
-    int *d_idx_max_int; /**
-                         * Device index of the maximum int in d_data.
-                         */
-    gpuErrchk( cudaMalloc((void**)&d_idx_max_int,
-                          sizeof *d_idx_max_int) );
 
     int vals_len = num_thds_per_blk;
     int idxs_len = num_thds_per_blk;
@@ -245,18 +251,19 @@ int find_idx_max_int(int *d_data, int data_len) {
     find_idx_max_int_krn<<<num_blks, num_thds_per_blk, shared_mem_size>>>(
                                                             num_thds_per_blk,
                                                             d_data,
-                                                            data_len,
-                                                            d_idx_max_int
+                                                            data_len
                                                                          );
 
     gpuErrchk( cudaPeekAtLastError() );
 
     int idx_max_int;
-    gpuErrchk( cudaMemcpy(&idx_max_int, d_idx_max_int,
+    /**
+     * dev_int_res is the device index of the maximum int in d_data. -1 if all
+     * ints in d_data are negative.
+     */
+    gpuErrchk( cudaMemcpy(&idx_max_int, dev_int_res,
                           sizeof idx_max_int,
                           cudaMemcpyDeviceToHost) );
-
-    gpuErrchk( cudaFree(d_idx_max_int) );
 
     return idx_max_int;
 }
@@ -608,8 +615,7 @@ __host__ cudaError_t cuda_memset_float(float *devPtr,
 
 __global__ void find_idx_max_int_krn(int num_thds_per_blk,
                                      int *data,
-                                     int data_len,
-                                     int *idx_max_int) {
+                                     int data_len) {
     extern __shared__ volatile int array_fimik[];
 
     volatile int *vals = array_fimik;
@@ -710,7 +716,7 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
         }
 
         if (tid == 0) {
-            *idx_max_int = idxs[0];
+            *d_int_res = idxs[0];
             *d_blk_num = 0;
         }
     }

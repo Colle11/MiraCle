@@ -61,6 +61,21 @@ __device__ int d_blk_idxs_len;          /**
                                          * blocks.
                                          */
 
+__device__ int *d_blk_num;              /**
+                                         * Device counter to find the last
+                                         * block (pointer on the device).
+                                         */
+static int *dev_blk_num;                /**
+                                         * Device counter to find the last
+                                         * block (pointer on the host).
+                                         */
+                                        /**
+                                         * d_blk_num/dev_blk_num is initialized
+                                         * to 0. It is up to the kernel that
+                                         * uses it to reset it to 0 before
+                                         * terminating.
+                                         */
+
 
 /**
  * Kernels
@@ -74,11 +89,6 @@ __device__ int d_blk_idxs_len;          /**
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of positive ints.
  * @param [in]data_len Length of data.
- * @param [in]blk_vals A device array of the maximum values computed by each
- * block.
- * @param [in]blk_idxs A device array of the indices of the maximum values
- * computed by each block.
- * @param [in]blk_num A device counter to find the last block.
  * @param [out]idx_max_int The device index of the maximum int in data. -1 if
  * all ints in data are negative.
  * @retval None.
@@ -86,7 +96,6 @@ __device__ int d_blk_idxs_len;          /**
 __global__ void find_idx_max_int_krn(int num_thds_per_blk,
                                      int *data,
                                      int data_len,
-                                     int *blk_num,
                                      int *idx_max_int);
 
 
@@ -206,19 +215,19 @@ void init_utils_data_structs(int data_len) {
     gpuErrchk( cudaMemcpyToSymbol(d_blk_idxs, &dev_blk_idxs,
                                   sizeof dev_blk_idxs, 0UL,
                                   cudaMemcpyHostToDevice) );
+
+    gpuErrchk( cudaMalloc((void**)&dev_blk_num,
+                          sizeof *dev_blk_num) );
+    gpuErrchk( cudaMemcpyToSymbol(d_blk_num, &dev_blk_num,
+                                  sizeof dev_blk_num, 0UL,
+                                  cudaMemcpyHostToDevice) );
+    gpuErrchk( cudaMemset(dev_blk_num, 0, sizeof *dev_blk_num) );
 }
 
 
 int find_idx_max_int(int *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
-
-    int *d_blk_num;     /**
-                         * Device counter to find the last block.
-                         */
-    gpuErrchk( cudaMalloc((void**)&d_blk_num,
-                          sizeof *d_blk_num) );
-    gpuErrchk( cudaMemset(d_blk_num, 0, sizeof *d_blk_num) );
 
     int *d_idx_max_int; /**
                          * Device index of the maximum int in d_data.
@@ -237,7 +246,6 @@ int find_idx_max_int(int *d_data, int data_len) {
                                                             num_thds_per_blk,
                                                             d_data,
                                                             data_len,
-                                                            d_blk_num,
                                                             d_idx_max_int
                                                                          );
 
@@ -248,7 +256,6 @@ int find_idx_max_int(int *d_data, int data_len) {
                           sizeof idx_max_int,
                           cudaMemcpyDeviceToHost) );
 
-    gpuErrchk( cudaFree(d_blk_num) );
     gpuErrchk( cudaFree(d_idx_max_int) );
 
     return idx_max_int;
@@ -602,7 +609,6 @@ __host__ cudaError_t cuda_memset_float(float *devPtr,
 __global__ void find_idx_max_int_krn(int num_thds_per_blk,
                                      int *data,
                                      int data_len,
-                                     int *blk_num,
                                      int *idx_max_int) {
     extern __shared__ volatile int array_fimik[];
 
@@ -654,7 +660,7 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
         d_int_blk_vals[blockIdx.x] = vals[0];
         d_blk_idxs[blockIdx.x] = idxs[0];
 
-        if (atomicAdd(blk_num, 1) == gridDim.x - 1) {
+        if (atomicAdd(d_blk_num, 1) == gridDim.x - 1) {
             // True for the last block.
             *last_blk = true;
         }
@@ -705,6 +711,7 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
 
         if (tid == 0) {
             *idx_max_int = idxs[0];
+            *d_blk_num = 0;
         }
     }
 }

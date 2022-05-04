@@ -141,8 +141,6 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of ints.
  * @param [in]data_len Length of data.
- * @param [in]blk_vals A device array of the minimum values computed by each
- * block.
  * @param [in]blk_num A device counter to find the last block.
  * @param [out]min_int The device minimum int in data.
  * @retval None.
@@ -150,7 +148,6 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
 __global__ void find_min_int_krn(int num_thds_per_blk,
                                  int *data,
                                  int data_len,
-                                 int *blk_vals,
                                  int *blk_num,
                                  int *min_int);
 
@@ -319,13 +316,6 @@ int find_min_int(int *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
 
-    int *d_blk_vals;    /**
-                         * Device array of the minimum values computed by each
-                         * block.
-                         */
-    gpuErrchk( cudaMalloc((void**)&d_blk_vals,
-                          sizeof *d_blk_vals * num_blks) );
-
     int *d_blk_num;     /**
                          * Device counter to find the last block.
                          */
@@ -348,7 +338,6 @@ int find_min_int(int *d_data, int data_len) {
                                                         num_thds_per_blk,
                                                         d_data,
                                                         data_len,
-                                                        d_blk_vals,
                                                         d_blk_num,
                                                         d_min_int
                                                                      );
@@ -360,7 +349,6 @@ int find_min_int(int *d_data, int data_len) {
                           sizeof min_int,
                           cudaMemcpyDeviceToHost) );
 
-    gpuErrchk( cudaFree(d_blk_vals) );
     gpuErrchk( cudaFree(d_blk_num) );
     gpuErrchk( cudaFree(d_min_int) );
 
@@ -818,7 +806,6 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
 __global__ void find_min_int_krn(int num_thds_per_blk,
                                  int *data,
                                  int data_len,
-                                 int *blk_vals,
                                  int *blk_num,
                                  int *min_int) {
     extern __shared__ volatile int array_fmik[];
@@ -858,7 +845,7 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
 
     // Perform block-level reduction.
     if (tid == 0) {
-        blk_vals[blockIdx.x] = vals[0];
+        d_int_blk_vals[blockIdx.x] = vals[0];
         
         if (atomicAdd(blk_num, 1) == gridDim.x - 1) {
             // True for the last block.
@@ -872,8 +859,8 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
         val = INT_MAX;
 
         while (tid < gridDim.x) {
-            if (blk_vals[tid] < val) {
-                val = blk_vals[tid];
+            if (d_int_blk_vals[tid] < val) {
+                val = d_int_blk_vals[tid];
             }
 
             tid += blockDim.x;

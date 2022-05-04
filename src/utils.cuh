@@ -116,6 +116,15 @@ inline void init_PRNG() {
 
 
 /**
+ * @brief Initializes utils data structures.
+ * 
+ * @param [in]data_len Length of data.
+ * @retval None.
+ */
+void init_utils_data_structs(int data_len);
+
+
+/**
  * @brief Finds the index of the maximum int in a device array of positive
  * ints.
  * 

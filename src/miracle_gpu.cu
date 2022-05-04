@@ -522,6 +522,8 @@ Miracle *mrc_gpu_transfer_miracle_host_to_dev(Miracle *mrc) {
 
     init_aux_data_structs(mrc);
 
+    init_utils_data_structs(lit_occ_len);
+
     return d_mrc;
 }
 

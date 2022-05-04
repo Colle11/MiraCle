@@ -101,6 +101,15 @@ static int *dev_int_res;                /**
                                          * the host).
                                          */
 
+__device__ float *d_float_res;          /**
+                                         * Float device result (pointer on the
+                                         * device).
+                                         */
+static float *dev_float_res;            /**
+                                         * Float device result (pointer on the
+                                         * host).
+                                         */
+
 
 /**
  * Kernels
@@ -154,13 +163,11 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of floats.
  * @param [in]data_len Length of data.
- * @param [out]max_float The device maximum float in data.
  * @retval None.
  */
 __global__ void find_max_float_krn(int num_thds_per_blk,
                                    float *data,
-                                   int data_len,
-                                   float *max_float);
+                                   int data_len);
 
 
 /**
@@ -235,6 +242,12 @@ void init_utils_data_structs(int data_len) {
                           sizeof *dev_int_res) );
     gpuErrchk( cudaMemcpyToSymbol(d_int_res, &dev_int_res,
                                   sizeof dev_int_res, 0UL,
+                                  cudaMemcpyHostToDevice) );
+
+    gpuErrchk( cudaMalloc((void**)&dev_float_res,
+                          sizeof *dev_float_res) );
+    gpuErrchk( cudaMemcpyToSymbol(d_float_res, &dev_float_res,
+                                  sizeof dev_float_res, 0UL,
                                   cudaMemcpyHostToDevice) );
 }
 
@@ -336,12 +349,6 @@ float find_max_float(float *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
 
-    float *d_max_float;       /**
-                             * Device maximum float in d_data.
-                             */
-    gpuErrchk( cudaMalloc((void**)&d_max_float,
-                          sizeof *d_max_float) );
-
     int vals_len = num_thds_per_blk;
     int last_blk_len = 1;
     int shared_mem_size = (sizeof(float) * vals_len) +
@@ -350,19 +357,19 @@ float find_max_float(float *d_data, int data_len) {
     find_max_float_krn<<<num_blks, num_thds_per_blk, shared_mem_size>>>(
                                                             num_thds_per_blk,
                                                             d_data,
-                                                            data_len,
-                                                            d_max_float
+                                                            data_len
                                                                        );
 
     gpuErrchk( cudaPeekAtLastError() );
 
     float max_float;
-    gpuErrchk( cudaMemcpy(&max_float, d_max_float,
+    /**
+     * dev_float_res is the device maximum float in d_data.
+     */
+    gpuErrchk( cudaMemcpy(&max_float, dev_float_res,
                           sizeof max_float,
                           cudaMemcpyDeviceToHost) );
-
-    gpuErrchk( cudaFree(d_max_float) );
-
+    
     return max_float;
 }
 
@@ -849,8 +856,7 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
 
 __global__ void find_max_float_krn(int num_thds_per_blk,
                                    float *data,
-                                   int data_len,
-                                   float *max_float) {
+                                   int data_len) {
     extern __shared__ volatile float array_fmfk[];
 
     volatile float *vals = array_fmfk;
@@ -927,7 +933,7 @@ __global__ void find_max_float_krn(int num_thds_per_blk,
         }
 
         if (tid == 0) {
-            *max_float = vals[0];
+            *d_float_res = vals[0];
             *d_blk_num = 0;
         }
     }

@@ -141,14 +141,12 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of ints.
  * @param [in]data_len Length of data.
- * @param [in]blk_num A device counter to find the last block.
  * @param [out]min_int The device minimum int in data.
  * @retval None.
  */
 __global__ void find_min_int_krn(int num_thds_per_blk,
                                  int *data,
                                  int data_len,
-                                 int *blk_num,
                                  int *min_int);
 
 
@@ -316,13 +314,6 @@ int find_min_int(int *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
 
-    int *d_blk_num;     /**
-                         * Device counter to find the last block.
-                         */
-    gpuErrchk( cudaMalloc((void**)&d_blk_num,
-                          sizeof *d_blk_num) );
-    gpuErrchk( cudaMemset(d_blk_num, 0, sizeof *d_blk_num) );
-
     int *d_min_int;     /**
                          * Device minimum int in d_data.
                          */
@@ -338,7 +329,6 @@ int find_min_int(int *d_data, int data_len) {
                                                         num_thds_per_blk,
                                                         d_data,
                                                         data_len,
-                                                        d_blk_num,
                                                         d_min_int
                                                                      );
 
@@ -349,7 +339,6 @@ int find_min_int(int *d_data, int data_len) {
                           sizeof min_int,
                           cudaMemcpyDeviceToHost) );
 
-    gpuErrchk( cudaFree(d_blk_num) );
     gpuErrchk( cudaFree(d_min_int) );
 
     return min_int;
@@ -806,7 +795,6 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
 __global__ void find_min_int_krn(int num_thds_per_blk,
                                  int *data,
                                  int data_len,
-                                 int *blk_num,
                                  int *min_int) {
     extern __shared__ volatile int array_fmik[];
 
@@ -847,7 +835,7 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
     if (tid == 0) {
         d_int_blk_vals[blockIdx.x] = vals[0];
         
-        if (atomicAdd(blk_num, 1) == gridDim.x - 1) {
+        if (atomicAdd(d_blk_num, 1) == gridDim.x - 1) {
             // True for the last block.
             *last_blk = true;
         }
@@ -885,6 +873,7 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
 
         if (tid == 0) {
             *min_int = vals[0];
+            *d_blk_num = 0;
         }
     }
 }

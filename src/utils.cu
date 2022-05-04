@@ -128,19 +128,11 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of positive floats.
  * @param [in]data_len Length of data.
- * @param [in]blk_idxs A device array of the indices of the maximum values
- * computed by each block.
- * @param [in]blk_num A device counter to find the last block.
- * @param [out]idx_max_float The device index of the maximum float in data. -1
- * if all floats in data are negative.
  * @retval None.
  */
 __global__ void find_idx_max_float_krn(int num_thds_per_blk,
                                        float *data,
-                                       int data_len,
-                                       int *blk_idxs,
-                                       int *blk_num,
-                                       int *idx_max_float);
+                                       int data_len);
 
 
 /**
@@ -295,26 +287,6 @@ int find_idx_max_float(float *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
 
-    int *d_blk_idxs;        /**
-                             * Device array of the indices of the maximum
-                             * values computed by each block.
-                             */
-    gpuErrchk( cudaMalloc((void**)&d_blk_idxs,
-                          sizeof *d_blk_idxs * num_blks) );
-
-    int *d_blk_num;         /**
-                             * Device counter to find the last block.
-                             */
-    gpuErrchk( cudaMalloc((void**)&d_blk_num,
-                          sizeof *d_blk_num) );
-    gpuErrchk( cudaMemset(d_blk_num, 0, sizeof *d_blk_num) );
-
-    int *d_idx_max_float;   /**
-                             * Device index of the maximum float in d_data.
-                             */
-    gpuErrchk( cudaMalloc((void**)&d_idx_max_float,
-                          sizeof *d_idx_max_float) );
-
     int vals_len = num_thds_per_blk;
     int idxs_len = num_thds_per_blk;
     int last_blk_len = 1;
@@ -325,22 +297,19 @@ int find_idx_max_float(float *d_data, int data_len) {
     find_idx_max_float_krn<<<num_blks, num_thds_per_blk, shared_mem_size>>>(
                                                             num_thds_per_blk,
                                                             d_data,
-                                                            data_len,
-                                                            d_blk_idxs,
-                                                            d_blk_num,
-                                                            d_idx_max_float
-                                                                         );
+                                                            data_len
+                                                                           );
 
     gpuErrchk( cudaPeekAtLastError() );
 
     int idx_max_float;
-    gpuErrchk( cudaMemcpy(&idx_max_float, d_idx_max_float,
+    /**
+     * dev_int_res is the device index of the maximum float in d_data. -1 if
+     * all floats in d_data are negative.
+     */
+    gpuErrchk( cudaMemcpy(&idx_max_float, dev_int_res,
                           sizeof idx_max_float,
                           cudaMemcpyDeviceToHost) );
-
-    gpuErrchk( cudaFree(d_blk_idxs) );
-    gpuErrchk( cudaFree(d_blk_num) );
-    gpuErrchk( cudaFree(d_idx_max_float) );
 
     return idx_max_float;
 }
@@ -738,10 +707,7 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
 
 __global__ void find_idx_max_float_krn(int num_thds_per_blk,
                                        float *data,
-                                       int data_len,
-                                       int *blk_idxs,
-                                       int *blk_num,
-                                       int *idx_max_float) {
+                                       int data_len) {
     extern __shared__ volatile float array_fimfk[];
 
     volatile float *vals = array_fimfk;
@@ -790,9 +756,9 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
     // Perform block-level reduction.
     if (tid == 0) {
         d_float_blk_vals[blockIdx.x] = vals[0];
-        blk_idxs[blockIdx.x] = idxs[0];
+        d_blk_idxs[blockIdx.x] = idxs[0];
 
-        if (atomicAdd(blk_num, 1) == gridDim.x - 1) {
+        if (atomicAdd(d_blk_num, 1) == gridDim.x - 1) {
             // True for the last block.
             *last_blk = true;
         }
@@ -807,11 +773,11 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
         while (tid < gridDim.x) {
             if (d_float_blk_vals[tid] > val
 #ifdef MIN_IDX
-                || ((d_float_blk_vals[tid] == val) && (blk_idxs[tid] < idx))
+                || ((d_float_blk_vals[tid] == val) && (d_blk_idxs[tid] < idx))
 #endif
                ) {
                 val = d_float_blk_vals[tid];
-                idx = blk_idxs[tid];
+                idx = d_blk_idxs[tid];
             }
 
             tid += blockDim.x;
@@ -842,7 +808,8 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
         }
 
         if (tid == 0) {
-            *idx_max_float = idxs[0];
+            *d_int_res = idxs[0];
+            *d_blk_num = 0;
         }
     }
 }

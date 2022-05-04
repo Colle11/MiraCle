@@ -141,13 +141,11 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
  * @param [in]num_thds_per_blk A number of threads per block.
  * @param [in]data A device array of ints.
  * @param [in]data_len Length of data.
- * @param [out]min_int The device minimum int in data.
  * @retval None.
  */
 __global__ void find_min_int_krn(int num_thds_per_blk,
                                  int *data,
-                                 int data_len,
-                                 int *min_int);
+                                 int data_len);
 
 
 /**
@@ -314,12 +312,6 @@ int find_min_int(int *d_data, int data_len) {
     int num_blks = gpu_num_blocks(data_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
 
-    int *d_min_int;     /**
-                         * Device minimum int in d_data.
-                         */
-    gpuErrchk( cudaMalloc((void**)&d_min_int,
-                          sizeof *d_min_int) );
-
     int vals_len = num_thds_per_blk;
     int last_blk_len = 1;
     int shared_mem_size = (sizeof(int) * vals_len) +
@@ -328,18 +320,18 @@ int find_min_int(int *d_data, int data_len) {
     find_min_int_krn<<<num_blks, num_thds_per_blk, shared_mem_size>>>(
                                                         num_thds_per_blk,
                                                         d_data,
-                                                        data_len,
-                                                        d_min_int
+                                                        data_len
                                                                      );
 
     gpuErrchk( cudaPeekAtLastError() );
 
     int min_int;
-    gpuErrchk( cudaMemcpy(&min_int, d_min_int,
+    /**
+     * dev_int_res is the device minimum int in d_data.
+     */
+    gpuErrchk( cudaMemcpy(&min_int, dev_int_res,
                           sizeof min_int,
                           cudaMemcpyDeviceToHost) );
-
-    gpuErrchk( cudaFree(d_min_int) );
 
     return min_int;
 }
@@ -794,8 +786,7 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
 
 __global__ void find_min_int_krn(int num_thds_per_blk,
                                  int *data,
-                                 int data_len,
-                                 int *min_int) {
+                                 int data_len) {
     extern __shared__ volatile int array_fmik[];
 
     volatile int *vals = array_fmik;
@@ -872,7 +863,7 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
         }
 
         if (tid == 0) {
-            *min_int = vals[0];
+            *d_int_res = vals[0];
             *d_blk_num = 0;
         }
     }

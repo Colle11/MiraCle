@@ -56,6 +56,16 @@ static bool init_PRNG_seed = false;     /**
 
 
 /**
+ * @brief Wrapper macro to check for errors in the cudaPeekAtLastError API call.
+ * 
+ * @param [in]ans cudaPeekAtLastError API call.
+ * @retval None.
+ */
+// #define gpuErrchkPALE(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+#define gpuErrchkPALE(ans) {}
+
+
+/**
  * @brief Assert style handler function to check for errors in runtime CUDA API
  * code.
  * 

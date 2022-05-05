@@ -269,7 +269,7 @@ int find_idx_max_int(int *d_data, int data_len) {
                                                             data_len
                                                                          );
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     int idx_max_int;
     /**
@@ -301,7 +301,7 @@ int find_idx_max_float(float *d_data, int data_len) {
                                                             data_len
                                                                            );
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     int idx_max_float;
     /**
@@ -331,7 +331,7 @@ int find_min_int(int *d_data, int data_len) {
                                                         data_len
                                                                      );
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     int min_int;
     /**
@@ -360,7 +360,7 @@ float find_max_float(float *d_data, int data_len) {
                                                             data_len
                                                                        );
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     float max_float;
     /**

@@ -601,7 +601,7 @@ void mrc_gpu_assign_lits(Lit *lits, int lits_len, Miracle *d_mrc) {
 
     update_var_ass_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
     
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Update device clause satisfiability.
     int clause_sat_len;
@@ -614,14 +614,14 @@ void mrc_gpu_assign_lits(Lit *lits, int lits_len, Miracle *d_mrc) {
 
     update_clause_sat_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
     
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 }
 
 
 void mrc_gpu_increase_decision_level(Miracle *d_mrc) {
     increase_dec_lvl_krn<<<1, 1>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 }
 
 
@@ -637,7 +637,7 @@ void mrc_gpu_backjump(int bj_dec_lvl, Miracle *d_mrc) {
 
     restore_clause_sat_krn<<<num_blks, num_thds_per_blk>>>(bj_dec_lvl, d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Restore device variable assignments.
     int var_ass_len;
@@ -649,12 +649,12 @@ void mrc_gpu_backjump(int bj_dec_lvl, Miracle *d_mrc) {
     
     restore_var_ass_krn<<<num_blks, num_thds_per_blk>>>(bj_dec_lvl, d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Restore device decision level.
     restore_dec_lvl_krn<<<1, 1>>>(bj_dec_lvl, d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 }
 
 
@@ -675,7 +675,7 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
 
     init_var_availability_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Clear d_cum_lit_occ.
     gpuErrchk( cudaMemset(dev_cum_lit_occ, 0,
@@ -691,7 +691,7 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
 
     compute_clause_sizes_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Init d_clause_idxs.
     num_blks = gpu_num_blocks(clause_idxs_len);
@@ -699,7 +699,7 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
 
     init_clause_idxs_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Sort the clauses by increasing size.
     thrust::sort_by_key(thrust::device,
@@ -768,7 +768,7 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
                                                         num_clauses_same_size,
                                                         i);
 
-        gpuErrchk( cudaPeekAtLastError() );
+        gpuErrchkPALE( cudaPeekAtLastError() );
 
         num_blks = gpu_num_blocks(var_weights_len);
         num_thds_per_blk = gpu_num_threads_per_block();
@@ -780,7 +780,7 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
                                                                     beta
                                                                          );
 
-        gpuErrchk( cudaPeekAtLastError() );
+        gpuErrchkPALE( cudaPeekAtLastError() );
 
         greatest_v_weight = find_max_float(dev_var_weights, var_weights_len);
 
@@ -791,7 +791,7 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
                                                             greatest_v_weight
                                                                         );
 
-        gpuErrchk( cudaPeekAtLastError() );
+        gpuErrchkPALE( cudaPeekAtLastError() );
     }
 
     Var bvar = (Var)find_min_int(dev_var_availability, var_availability_len);
@@ -828,7 +828,7 @@ Lit mrc_gpu_POSIT_heuristic(Miracle *d_mrc, const int n) {
 
     compute_clause_sizes_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Smallest clause size.
     int smallest_c_size = find_min_int(dev_clause_sizes, clause_sizes_len);
@@ -850,7 +850,7 @@ Lit mrc_gpu_POSIT_heuristic(Miracle *d_mrc, const int n) {
                                                                 smallest_c_size
                                                                          );
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Clear d_var_weights.
     gpuErrchk( cuda_memset_float(dev_var_weights, -1.0, var_weights_len) );
@@ -862,7 +862,7 @@ Lit mrc_gpu_POSIT_heuristic(Miracle *d_mrc, const int n) {
                                                   num_thds_per_blk>>>(d_mrc,
                                                                       n);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     Var bvar = (Var)find_idx_max_float(dev_var_weights, var_weights_len);
     Lidx pos_lidx = varpol_to_lidx(bvar, true);
@@ -1063,7 +1063,7 @@ static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
 
     JW_weigh_lits_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     Lidx blidx;     // JW_xS branching literal index.
 
@@ -1077,7 +1077,7 @@ static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
         JW_TS_weigh_vars_unres_clauses_krn<<<num_blks,
                                              num_thds_per_blk>>>(d_mrc);
 
-        gpuErrchk( cudaPeekAtLastError() );
+        gpuErrchkPALE( cudaPeekAtLastError() );
 
         Var bvar = (Var)find_idx_max_float(dev_var_weights, var_weights_len);
 
@@ -1137,7 +1137,7 @@ static Lit DLxS_heuristic(Miracle *d_mrc, bool dlcs) {
 
     count_lits_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-    gpuErrchk( cudaPeekAtLastError() );
+    gpuErrchkPALE( cudaPeekAtLastError() );
 
     Lidx blidx;     // DLxS branching literal index.
 
@@ -1150,7 +1150,7 @@ static Lit DLxS_heuristic(Miracle *d_mrc, bool dlcs) {
 
         count_vars_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
 
-        gpuErrchk( cudaPeekAtLastError() );
+        gpuErrchkPALE( cudaPeekAtLastError() );
 
         Var bvar = (Var)find_idx_max_int(dev_var_occ, var_occ_len);
         Lidx pos_lidx = varpol_to_lidx(bvar, true);

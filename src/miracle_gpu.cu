@@ -1224,14 +1224,12 @@ __global__ void update_var_ass_krn(Miracle *mrc) {
     bool pol;
     int dec_lvl = mrc->dec_lvl;
 
-    while (gid < lits_lgth) {
+    for (; gid < lits_lgth; gid += stride) {
         lit = d_lits[gid];
         var = lit_to_var(lit);
         pol = lit_to_pol(lit);
 
         mrc->var_ass[var] = pol ? dec_lvl : -(dec_lvl);
-        
-        gid += stride;
     }
 }
 
@@ -1246,7 +1244,7 @@ __global__ void update_clause_sat_krn(Miracle *mrc) {
     bool pol;
     int dec_lvl = mrc->dec_lvl;
 
-    while (gid < clause_sat_lgth) {
+    for (; gid < clause_sat_lgth; gid += stride) {
         if (!(mrc->clause_sat[gid])) {
             for (int l = mrc->phi->clause_indices[gid];
                  l < mrc->phi->clause_indices[gid+1];
@@ -1262,8 +1260,6 @@ __global__ void update_clause_sat_krn(Miracle *mrc) {
                 }
             }
         }
-
-        gid += stride;
     }
 }
 
@@ -1283,12 +1279,10 @@ __global__ void restore_clause_sat_krn(int bj_dec_lvl, Miracle *mrc) {
 
     int clause_sat_lgth = mrc->clause_sat_len;
 
-    while (gid < clause_sat_lgth) {
+    for (; gid < clause_sat_lgth; gid += stride) {
         if (mrc->clause_sat[gid] > bj_dec_lvl) {
             mrc->clause_sat[gid] = 0;
         }
-
-        gid += stride;
     }
 }
 
@@ -1299,12 +1293,10 @@ __global__ void restore_var_ass_krn(int bj_dec_lvl, Miracle *mrc) {
 
     int var_ass_lgth = mrc->var_ass_len;
 
-    while (gid < var_ass_lgth) {
+    for (; gid < var_ass_lgth; gid += stride) {
         if (abs(mrc->var_ass[gid]) > bj_dec_lvl) {
             mrc->var_ass[gid] = 0;
         }
-
-        gid += stride;
     }
 }
 
@@ -1328,7 +1320,7 @@ __global__ void JW_weigh_lits_unres_clauses_krn(Miracle *mrc) {
     Var var;
     float weight;
 
-    while (gid < clause_sat_lgth) {
+    for (; gid < clause_sat_lgth; gid += stride) {
         if (!(mrc->clause_sat[gid])) {
             c_size = 0;
 
@@ -1355,8 +1347,6 @@ __global__ void JW_weigh_lits_unres_clauses_krn(Miracle *mrc) {
                 }
             }
         }
-
-        gid += stride;
     }
 }
 
@@ -1371,7 +1361,7 @@ __global__ void JW_TS_weigh_vars_unres_clauses_krn(Miracle *mrc) {
     float weight_pos_lidx;
     float weight_neg_lidx;
 
-    while (gid < var_weights_lgth) {
+    for (; gid < var_weights_lgth; gid += stride) {
         if (!(mrc->var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
@@ -1383,8 +1373,6 @@ __global__ void JW_TS_weigh_vars_unres_clauses_krn(Miracle *mrc) {
                                          weight_neg_lidx);
             }
         }
-
-        gid += stride;
     }
 }
 
@@ -1398,7 +1386,7 @@ __global__ void compute_clause_sizes_krn(Miracle *mrc) {
     Lidx lidx;
     Var var;
 
-    while (gid < clause_sizes_lgth) {
+    for (; gid < clause_sizes_lgth; gid += stride) {
         if (!(mrc->clause_sat[gid])) {
             c_size = 0;
 
@@ -1415,8 +1403,6 @@ __global__ void compute_clause_sizes_krn(Miracle *mrc) {
 
             d_clause_sizes[gid] = c_size;
         }
-
-        gid += stride;
     }
 }
 
@@ -1430,7 +1416,7 @@ __global__ void count_lits_smallest_unres_clauses_krn(Miracle *mrc,
     Lidx lidx;
     Var var;
 
-    while (gid < clause_sat_lgth) {
+    for (; gid < clause_sat_lgth; gid += stride) {
         if (!(mrc->clause_sat[gid]) &&
             (d_clause_sizes[gid] == smallest_c_size)) {
             for (int l = mrc->phi->clause_indices[gid];
@@ -1444,8 +1430,6 @@ __global__ void count_lits_smallest_unres_clauses_krn(Miracle *mrc,
                 }
             }
         }
-
-        gid += stride;
     }
 }
 
@@ -1459,7 +1443,7 @@ __global__ void POSIT_weigh_vars_smallest_unres_clauses_krn(Miracle *mrc,
     Lidx pos_lidx;
     Lidx neg_lidx;
 
-    while (gid < var_weights_lgth) {
+    for (; gid < var_weights_lgth; gid += stride) {
         if (!(mrc->var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
@@ -1469,8 +1453,6 @@ __global__ void POSIT_weigh_vars_smallest_unres_clauses_krn(Miracle *mrc,
                                   (int)(pow(2, n) + 0.5) +
                                   d_lit_occ[pos_lidx] + d_lit_occ[neg_lidx]);
         }
-
-        gid += stride;
     }
 }
 
@@ -1483,7 +1465,7 @@ __global__ void count_lits_unres_clauses_krn(Miracle *mrc) {
     Lidx lidx;
     Var var;
 
-    while (gid < clause_sat_lgth) {
+    for (; gid < clause_sat_lgth; gid += stride) {
         if (!(mrc->clause_sat[gid])) {
             for (int l = mrc->phi->clause_indices[gid];
                  l < mrc->phi->clause_indices[gid+1];
@@ -1496,8 +1478,6 @@ __global__ void count_lits_unres_clauses_krn(Miracle *mrc) {
                 }
             }
         }
-
-        gid += stride;
     }
 }
 
@@ -1510,15 +1490,13 @@ __global__ void count_vars_unres_clauses_krn(Miracle *mrc) {
     Lidx pos_lidx;
     Lidx neg_lidx;
 
-    while (gid < var_occ_lgth) {
+    for (; gid < var_occ_lgth; gid += stride) {
         if (!(mrc->var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
 
             d_var_occ[gid] = d_lit_occ[pos_lidx] + d_lit_occ[neg_lidx];
         }
-
-        gid += stride;
     }
 }
 
@@ -1529,10 +1507,8 @@ __global__ void init_var_availability_krn(Miracle *mrc) {
 
     int var_availability_lgth = d_var_availability_len;
 
-    while (gid < var_availability_lgth) {
+    for (; gid < var_availability_lgth; gid += stride) {
         d_var_availability[gid] = mrc->var_ass[gid] ? INT_MAX : gid;
-
-        gid += stride;
     }
 }
 
@@ -1543,10 +1519,8 @@ __global__ void init_clause_idxs_krn(Miracle *mrc) {
 
     int clause_idxs_lgth = d_clause_idxs_len;
 
-    while (gid < clause_idxs_lgth) {
+    for (; gid < clause_idxs_lgth; gid += stride) {
         d_clause_idxs[gid] = gid;
-
-        gid += stride;
     }
 }
 
@@ -1564,7 +1538,7 @@ __global__ void count_lits_unres_clauses_same_size_krn(
     Lidx lidx;
     Var var;
 
-    while (gid <  num_clauses_same_size) {
+    for (; gid < num_clauses_same_size; gid += stride) {
         c = d_clause_idxs[cidx];
 
         for (int l = mrc->phi->clause_indices[c];
@@ -1580,9 +1554,8 @@ __global__ void count_lits_unres_clauses_same_size_krn(
                 atomicAdd(&(d_cum_lit_occ[lidx]), 1);
             }
         }
-        
+
         cidx += stride;
-        gid += stride;
     }
 }
 
@@ -1599,7 +1572,7 @@ __global__ void BOHM_weigh_vars_unres_clauses_same_size_krn(Miracle *mrc,
     int lc_i_pos_lidx;
     int lc_i_neg_lidx;
 
-    while (gid < var_weights_lgth) {
+    for (; gid < var_weights_lgth; gid += stride) {
         if (d_var_availability[gid] != INT_MAX) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
@@ -1611,8 +1584,6 @@ __global__ void BOHM_weigh_vars_unres_clauses_same_size_krn(Miracle *mrc,
                                  (alpha * max(lc_i_pos_lidx, lc_i_neg_lidx) +
                                   beta * min(lc_i_pos_lidx, lc_i_neg_lidx));
         }
-
-        gid += stride;
     }
 }
 
@@ -1623,12 +1594,10 @@ __global__ void BOHM_update_var_availability_krn(float greatest_v_weight) {
 
     int var_availability_lgth = d_var_availability_len;
 
-    while (gid < var_availability_lgth) {
+    for (; gid < var_availability_lgth; gid += stride) {
         if (d_var_availability[gid] != INT_MAX &&
             d_var_weights[gid] < greatest_v_weight) {
             d_var_availability[gid] = INT_MAX;
         }
-
-        gid += stride;
     }
 }

@@ -565,13 +565,11 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
     int idx = -1;
 
     // Sweep from global memory.
-    while (gid < data_len) {
+    for (; gid < data_len; gid += stride) {
         if (data[gid] > val) {
             val = data[gid];
             idx = gid;
         }
-
-        gid += stride;
     }
 
     // Populate shared memory.
@@ -613,7 +611,7 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
         val = -1;
         idx = -1;
 
-        while (tid < gridDim.x) {
+        for (; tid < gridDim.x; tid += blockDim.x) {
             if (d_int_blk_vals[tid] > val
 #ifdef MIN_IDX
                 || ((d_int_blk_vals[tid] == val) && (d_blk_idxs[tid] < idx))
@@ -622,8 +620,6 @@ __global__ void find_idx_max_int_krn(int num_thds_per_blk,
                 val = d_int_blk_vals[tid];
                 idx = d_blk_idxs[tid];
             }
-
-            tid += blockDim.x;
         }
 
         tid = threadIdx.x;
@@ -675,13 +671,11 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
     int idx = -1;
 
     // Sweep from global memory.
-    while (gid < data_len) {
+    for (; gid < data_len; gid += stride) {
         if (data[gid] > val) {
             val = data[gid];
             idx = gid;
         }
-
-        gid += stride;
     }
 
     // Populate shared memory.
@@ -723,7 +717,7 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
         val = -1.0;
         idx = -1;
 
-        while (tid < gridDim.x) {
+        for (; tid < gridDim.x; tid += blockDim.x) {
             if (d_float_blk_vals[tid] > val
 #ifdef MIN_IDX
                 || ((d_float_blk_vals[tid] == val) && (d_blk_idxs[tid] < idx))
@@ -732,8 +726,6 @@ __global__ void find_idx_max_float_krn(int num_thds_per_blk,
                 val = d_float_blk_vals[tid];
                 idx = d_blk_idxs[tid];
             }
-
-            tid += blockDim.x;
         }
 
         tid = threadIdx.x;
@@ -783,12 +775,10 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
     int val = INT_MAX;
 
     // Sweep from global memory.
-    while (gid < data_len) {
+    for (; gid < data_len; gid += stride) {
         if (data[gid] < val) {
             val = data[gid];
         }
-
-        gid += stride;
     }
 
     // Populate shared memory.
@@ -821,12 +811,10 @@ __global__ void find_min_int_krn(int num_thds_per_blk,
     if (*last_blk) {
         val = INT_MAX;
 
-        while (tid < gridDim.x) {
+        for (; tid < gridDim.x; tid += blockDim.x) {
             if (d_int_blk_vals[tid] < val) {
                 val = d_int_blk_vals[tid];
             }
-
-            tid += blockDim.x;
         }
 
         tid = threadIdx.x;
@@ -869,12 +857,10 @@ __global__ void find_max_float_krn(int num_thds_per_blk,
     float val = -FLT_MAX;
 
     // Sweep from global memory.
-    while (gid < data_len) {
+    for (; gid < data_len; gid += stride) {
         if (data[gid] > val) {
             val = data[gid];
         }
-
-        gid += stride;
     }
 
     // Populate shared memory.
@@ -907,12 +893,10 @@ __global__ void find_max_float_krn(int num_thds_per_blk,
     if (*last_blk) {
         val = -FLT_MAX;
 
-        while (tid < gridDim.x) {
+        for (; tid < gridDim.x; tid += blockDim.x) {
             if (d_float_blk_vals[tid] > val) {
                 val = d_float_blk_vals[tid];
             }
-
-            tid += blockDim.x;
         }
 
         tid = threadIdx.x;
@@ -944,10 +928,8 @@ __global__ void cuda_memset_int_krn(int *ptr, int value, unsigned int count) {
     int gid = threadIdx.x + blockIdx.x * blockDim.x;
     int stride = blockDim.x * gridDim.x;
 
-    while (gid < count) {
+    for (; gid < count; gid += stride) {
         ptr[gid] = value;
-
-        gid += stride;
     }
 }
 
@@ -958,9 +940,7 @@ __global__ void cuda_memset_float_krn(float *ptr,
     int gid = threadIdx.x + blockIdx.x * blockDim.x;
     int stride = blockDim.x * gridDim.x;
 
-    while (gid < count) {
+    for (; gid < count; gid += stride) {
         ptr[gid] = value;
-
-        gid += stride;
     }
 }

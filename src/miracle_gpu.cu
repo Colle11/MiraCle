@@ -1334,6 +1334,8 @@ __global__ void JW_weigh_lits_unres_clauses_krn(Miracle *mrc) {
                     c_size++;
                 }
             }
+            
+            weight = powf(2.0, (float)-c_size);
 
             for (int l = mrc->phi->clause_indices[gid];
                  l < mrc->phi->clause_indices[gid+1];
@@ -1342,7 +1344,6 @@ __global__ void JW_weigh_lits_unres_clauses_krn(Miracle *mrc) {
                 var = lidx_to_var(lidx);
 
                 if (!(mrc->var_ass[var])) {
-                    weight = powf(2.0, (float)-c_size);
                     atomicAdd(&(d_lit_weights[lidx]), weight);
                 }
             }
@@ -1442,16 +1443,20 @@ __global__ void POSIT_weigh_vars_smallest_unres_clauses_krn(Miracle *mrc,
     int var_weights_lgth = d_var_weights_len;
     Lidx pos_lidx;
     Lidx neg_lidx;
+    int lc_s_pos_lidx;
+    int lc_s_neg_lidx;
 
     for (; gid < var_weights_lgth; gid += stride) {
         if (!(mrc->var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
+            lc_s_pos_lidx = d_lit_occ[pos_lidx];
+            lc_s_neg_lidx = d_lit_occ[neg_lidx];
 
             d_var_weights[gid] = (float)
-                                 (d_lit_occ[pos_lidx] * d_lit_occ[neg_lidx] *
+                                 (lc_s_pos_lidx * lc_s_neg_lidx *
                                   (int)(pow(2, n) + 0.5) +
-                                  d_lit_occ[pos_lidx] + d_lit_occ[neg_lidx]);
+                                  lc_s_pos_lidx + lc_s_neg_lidx);
         }
     }
 }

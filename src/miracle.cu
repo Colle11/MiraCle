@@ -115,33 +115,33 @@ static void destroy_aux_data_structs();
  * @brief If two_sided = true, computes the JW-TS heuristic,
  * otherwise computes the JW-OS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]two_sided A flag to choose JW-TS or JW-OS.
  * @retval The branching literal.
  */
-static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided);
+static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided);
 
 
 /**
  * @brief If dlcs = true, computes the DLCS heuristic,
  * otherwise computes the DLIS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]dlcs A flag to choose DLCS or DLIS.
  * @retval The branching literal.
  */
-static Lit DLxS_heuristic(Miracle *mrc, bool dlcs);
+static Lit DLxS_heuristic(sat_miracle *sat_mrc, bool dlcs);
 
 
 /**
  * @brief If rdlcs = true, computes the RDLCS heuristic,
  * otherwise computes the RDLIS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]rdlcs A flag to choose RDLCS or RDLIS.
  * @retval The branching literal.
  */
-static Lit RDLxS_heuristic(Miracle *mrc, bool rdlcs);
+static Lit RDLxS_heuristic(sat_miracle *sat_mrc, bool rdlcs);
 
 
 /**
@@ -252,7 +252,14 @@ void mrc_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc) {
 }
 
 
-void mrc_backjump(int bj_dec_lvl, Miracle *mrc) {
+void mrc_increase_decision_level(sat_miracle *sat_mrc) {
+    sat_mrc->mrc->dec_lvl++;
+}
+
+
+void mrc_backjump(int bj_dec_lvl, sat_miracle *sat_mrc) {
+    Miracle *mrc = sat_mrc->mrc;
+
     // Restore clause satisfiability.
     for (int c = 0; c < mrc->clause_sat_len; c++) {
         if (mrc->clause_sat[c] > bj_dec_lvl) {
@@ -272,7 +279,9 @@ void mrc_backjump(int bj_dec_lvl, Miracle *mrc) {
 }
 
 
-Lit mrc_RAND_heuristic(Miracle *mrc) {
+Lit mrc_RAND_heuristic(sat_miracle *sat_mrc) {
+    Miracle *mrc = sat_mrc->mrc;
+
     init_PRNG();
 
     int num_unass_vars = 0;
@@ -302,17 +311,19 @@ Lit mrc_RAND_heuristic(Miracle *mrc) {
 }
 
 
-Lit mrc_JW_OS_heuristic(Miracle *mrc) {
-    return JW_xS_heuristic(mrc, false);
+Lit mrc_JW_OS_heuristic(sat_miracle *sat_mrc) {
+    return JW_xS_heuristic(sat_mrc, false);
 }
 
 
-Lit mrc_JW_TS_heuristic(Miracle *mrc) {
-    return JW_xS_heuristic(mrc, true);
+Lit mrc_JW_TS_heuristic(sat_miracle *sat_mrc) {
+    return JW_xS_heuristic(sat_mrc, true);
 }
 
 
-Lit mrc_BOHM_heuristic(Miracle *mrc, const int alpha, const int beta) {
+Lit mrc_BOHM_heuristic(sat_miracle *sat_mrc, const int alpha, const int beta) {
+    Miracle *mrc = sat_mrc->mrc;
+
     // Init var_availability.
     for (Var v = 0; v < var_availability_len; v++) {
         var_availability[v] = !((bool)mrc->var_ass[v]);
@@ -453,7 +464,9 @@ Lit mrc_BOHM_heuristic(Miracle *mrc, const int alpha, const int beta) {
 }
 
 
-Lit mrc_POSIT_heuristic(Miracle *mrc, const int n) {
+Lit mrc_POSIT_heuristic(sat_miracle *sat_mrc, const int n) {
+    Miracle *mrc = sat_mrc->mrc;
+
     // Clear clause_sizes.
     memset(clause_sizes, 0, sizeof *clause_sizes * clause_sizes_len);
 
@@ -550,23 +563,23 @@ Lit mrc_POSIT_heuristic(Miracle *mrc, const int n) {
 }
 
 
-Lit mrc_DLIS_heuristic(Miracle *mrc) {
-    return DLxS_heuristic(mrc, false);
+Lit mrc_DLIS_heuristic(sat_miracle *sat_mrc) {
+    return DLxS_heuristic(sat_mrc, false);
 }
 
 
-Lit mrc_DLCS_heuristic(Miracle *mrc) {
-    return DLxS_heuristic(mrc, true);
+Lit mrc_DLCS_heuristic(sat_miracle *sat_mrc) {
+    return DLxS_heuristic(sat_mrc, true);
 }
 
 
-Lit mrc_RDLIS_heuristic(Miracle *mrc) {
-    return RDLxS_heuristic(mrc, false);
+Lit mrc_RDLIS_heuristic(sat_miracle *sat_mrc) {
+    return RDLxS_heuristic(sat_mrc, false);
 }
 
 
-Lit mrc_RDLCS_heuristic(Miracle *mrc) {
-    return RDLxS_heuristic(mrc, true);
+Lit mrc_RDLCS_heuristic(sat_miracle *sat_mrc) {
+    return RDLxS_heuristic(sat_mrc, true);
 }
 
 
@@ -621,7 +634,9 @@ static void destroy_aux_data_structs() {
 }
 
 
-static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided) {
+static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided) {
+    Miracle *mrc = sat_mrc->mrc;
+
     // Clear lit_weights.
     memset(lit_weights, 0, sizeof *lit_weights * lit_weights_len);
 
@@ -705,7 +720,9 @@ static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided) {
 }
 
 
-static Lit DLxS_heuristic(Miracle *mrc, bool dlcs) {
+static Lit DLxS_heuristic(sat_miracle *sat_mrc, bool dlcs) {
+    Miracle *mrc = sat_mrc->mrc;
+
     // Clear lit_occ.
     memset(lit_occ, 0, sizeof *lit_occ * lit_occ_len);
 
@@ -766,17 +783,17 @@ static Lit DLxS_heuristic(Miracle *mrc, bool dlcs) {
 }
 
 
-static Lit RDLxS_heuristic(Miracle *mrc, bool rdlcs) {
+static Lit RDLxS_heuristic(sat_miracle *sat_mrc, bool rdlcs) {
     init_PRNG();
 
     if (rdlcs && (rand() % 2)) {
-        return neg_lit(mrc_DLCS_heuristic(mrc));
+        return neg_lit(mrc_DLCS_heuristic(sat_mrc));
     } else if (rdlcs) {
-        return mrc_DLCS_heuristic(mrc);
+        return mrc_DLCS_heuristic(sat_mrc);
     } else if (rand() % 2) {
-        return neg_lit(mrc_DLIS_heuristic(mrc));
+        return neg_lit(mrc_DLIS_heuristic(sat_mrc));
     } else {
-        return mrc_DLIS_heuristic(mrc);
+        return mrc_DLIS_heuristic(sat_mrc);
     }
 }
 

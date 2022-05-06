@@ -100,12 +100,10 @@ void mrc_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc);
 /**
  * @brief Increases the decision level in a miracle.
  * 
- * @param [in/out]mrc A miracle.
+ * @param [in/out]sat_mrc A sat_miracle.
  * @retval None.
  */
-inline void mrc_increase_decision_level(Miracle *mrc) {
-    mrc->dec_lvl++;
-}
+void mrc_increase_decision_level(sat_miracle *sat_mrc);
 
 
 /**
@@ -113,93 +111,93 @@ inline void mrc_increase_decision_level(Miracle *mrc) {
  * 
  * @param [in]bj_dec_lvl A backjump decision level. A bj_dec_lvl < 1 resets the
  * miracle.
- * @param [in/out]mrc A miracle.
+ * @param [in/out]sat_mrc A sat_miracle.
  * @retval None.
  */
-void mrc_backjump(int bj_dec_lvl, Miracle *mrc);
+void mrc_backjump(int bj_dec_lvl, sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the RAND heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_RAND_heuristic(Miracle *mrc);
+Lit mrc_RAND_heuristic(sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the JW-OS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_JW_OS_heuristic(Miracle *mrc);
+Lit mrc_JW_OS_heuristic(sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the JW-TS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_JW_TS_heuristic(Miracle *mrc);
+Lit mrc_JW_TS_heuristic(sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the BOHM heuristic.
  *
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]alpha A constant of the BOHM weight function.
  * @param [in]beta A constant of the BOHM weight function.
  * @retval The branching literal.
  */
-Lit mrc_BOHM_heuristic(Miracle *mrc, const int alpha, const int beta);
+Lit mrc_BOHM_heuristic(sat_miracle *sat_mrc, const int alpha, const int beta);
 
 
 /**
  * @brief Computes the POSIT heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]n A constant of the POSIT weight function.
  * @retval The branching literal.
  */
-Lit mrc_POSIT_heuristic(Miracle *mrc, const int n);
+Lit mrc_POSIT_heuristic(sat_miracle *sat_mrc, const int n);
 
 
 /**
  * @brief Computes the DLIS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_DLIS_heuristic(Miracle *mrc);
+Lit mrc_DLIS_heuristic(sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the DLCS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_DLCS_heuristic(Miracle *mrc);
+Lit mrc_DLCS_heuristic(sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the RDLIS heuristic.
  * 
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_RDLIS_heuristic(Miracle *mrc);
+Lit mrc_RDLIS_heuristic(sat_miracle *sat_mrc);
 
 
 /**
  * @brief Computes the RDLCS heuristic.
- * @param [in]mrc A miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @retval The branching literal.
  */
-Lit mrc_RDLCS_heuristic(Miracle *mrc);
+Lit mrc_RDLCS_heuristic(sat_miracle *sat_mrc);
 
 
 #endif

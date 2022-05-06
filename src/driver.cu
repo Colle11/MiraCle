@@ -50,23 +50,15 @@ int main(int argc, char *argv[]) {
 
     mrc_assign_lits(lits, lits_len, sat_mrc);
 
-    mrc_print_sat_miracle(sat_mrc);
-
-    Miracle *mrc = sat_mrc->mrc;    // TO-DO
-
-    // Miracle *mrc = mrc_create_miracle(filename);
-
-    // mrc_assign_lits(lits, lits_len, mrc);
-    
-    Lit RAND_blit = mrc_RAND_heuristic(mrc);
-    Lit JW_OS_blit = mrc_JW_OS_heuristic(mrc);
-    Lit JW_TS_blit = mrc_JW_TS_heuristic(mrc);
-    Lit BOHM_blit = mrc_BOHM_heuristic(mrc, BOHM_alpha, BOHM_beta);
-    Lit POSIT_blit = mrc_POSIT_heuristic(mrc, POSIT_n);
-    Lit DLIS_blit = mrc_DLIS_heuristic(mrc);
-    Lit DLCS_blit = mrc_DLCS_heuristic(mrc);
-    Lit RDLIS_blit = mrc_RDLIS_heuristic(mrc);
-    Lit RDLCS_blit = mrc_RDLCS_heuristic(mrc);
+    Lit RAND_blit = mrc_RAND_heuristic(sat_mrc);
+    Lit JW_OS_blit = mrc_JW_OS_heuristic(sat_mrc);
+    Lit JW_TS_blit = mrc_JW_TS_heuristic(sat_mrc);
+    Lit BOHM_blit = mrc_BOHM_heuristic(sat_mrc, BOHM_alpha, BOHM_beta);
+    Lit POSIT_blit = mrc_POSIT_heuristic(sat_mrc, POSIT_n);
+    Lit DLIS_blit = mrc_DLIS_heuristic(sat_mrc);
+    Lit DLCS_blit = mrc_DLCS_heuristic(sat_mrc);
+    Lit RDLIS_blit = mrc_RDLIS_heuristic(sat_mrc);
+    Lit RDLCS_blit = mrc_RDLCS_heuristic(sat_mrc);
     
     printf("RAND branching literal = %d\n", RAND_blit);
     printf("JW-OS branching literal = %d\n", JW_OS_blit);
@@ -78,8 +70,6 @@ int main(int argc, char *argv[]) {
     printf("RDLIS branching literal = %d\n", RDLIS_blit);
     printf("RDLCS branching literal = %d\n", RDLCS_blit);
     
-    // mrc_destroy_miracle(mrc);
-
     printf("\n");
     printf("**************************************************************\n");
     printf("*********    End testing MiraCle (serial version)    *********\n");

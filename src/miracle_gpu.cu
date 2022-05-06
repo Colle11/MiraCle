@@ -15,6 +15,7 @@
 
 #include "cnf_formula_gpu.cuh"
 #include "miracle_gpu.cuh"
+#include "sat_miracle.cuh"
 #include "utils.cuh"
 #include "launch_parameters_gpu.cuh"
 
@@ -251,33 +252,33 @@ static void destroy_aux_data_structs();
  * @brief If two_sided = true, computes the JW-TS heuristic on the device,
  * otherwise computes the JW-OS heuristic on the device.
  * 
- * @param [in]d_mrc A device miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]two_sided A flag to choose JW-TS or JW-OS.
  * @retval The branching literal.
  */
-static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided);
+static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided);
 
 
 /**
  * @brief If dlcs = true, computes the DLCS heuristic on the device,
  * otherwise computes the DLIS heuristic on the device.
  * 
- * @param [in]d_mrc A device miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]dlcs A flag to choose DLCS or DLIS.
  * @retval The branching literal.
  */
-static Lit DLxS_heuristic(Miracle *d_mrc, bool dlcs);
+static Lit DLxS_heuristic(sat_miracle *sat_mrc, bool dlcs);
 
 
 /**
  * @brief If rdlcs = true, computes the RDLCS heuristic on the device,
  * otherwise computes the RDLIS heuristic on the device.
  * 
- * @param [in]d_mrc A device miracle.
+ * @param [in]sat_mrc A sat_miracle.
  * @param [in]rdlcs A flag to choose RDLCS or RDLIS.
  * @retval The branching literal.
  */
-static Lit RDLxS_heuristic(Miracle *d_mrc, bool rdlcs);
+static Lit RDLxS_heuristic(sat_miracle *sat_mrc, bool rdlcs);
 
 
 /**
@@ -586,7 +587,9 @@ void mrc_gpu_destroy_miracle(Miracle *d_mrc) {
 }
 
 
-void mrc_gpu_assign_lits(Lit *lits, int lits_len, Miracle *d_mrc) {
+void mrc_gpu_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     // Set d_lits_len and d_lits.
     gpuErrchk( cudaMemcpyToSymbol(d_lits_len, &lits_len,
                                   sizeof lits_len, 0UL,
@@ -618,14 +621,18 @@ void mrc_gpu_assign_lits(Lit *lits, int lits_len, Miracle *d_mrc) {
 }
 
 
-void mrc_gpu_increase_decision_level(Miracle *d_mrc) {
+void mrc_gpu_increase_decision_level(sat_miracle *sat_mrc) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     increase_dec_lvl_krn<<<1, 1>>>(d_mrc);
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 }
 
 
-void mrc_gpu_backjump(int bj_dec_lvl, Miracle *d_mrc) {
+void mrc_gpu_backjump(int bj_dec_lvl, sat_miracle *sat_mrc) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     // Restore device clause satisfiability.
     int clause_sat_len;
     gpuErrchk( cudaMemcpy(&clause_sat_len, &(d_mrc->clause_sat_len),
@@ -658,17 +665,21 @@ void mrc_gpu_backjump(int bj_dec_lvl, Miracle *d_mrc) {
 }
 
 
-Lit mrc_gpu_JW_OS_heuristic(Miracle *d_mrc) {
-    return JW_xS_heuristic(d_mrc, false);
+Lit mrc_gpu_JW_OS_heuristic(sat_miracle *sat_mrc) {
+    return JW_xS_heuristic(sat_mrc, false);
 }
 
 
-Lit mrc_gpu_JW_TS_heuristic(Miracle *d_mrc) {
-    return JW_xS_heuristic(d_mrc, true);
+Lit mrc_gpu_JW_TS_heuristic(sat_miracle *sat_mrc) {
+    return JW_xS_heuristic(sat_mrc, true);
 }
 
 
-Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
+Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
+                           const int alpha,
+                           const int beta) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     // Init d_var_availability.
     int num_blks = gpu_num_blocks(var_availability_len);
     int num_thds_per_blk = gpu_num_threads_per_block();
@@ -819,7 +830,9 @@ Lit mrc_gpu_BOHM_heuristic(Miracle *d_mrc, const int alpha, const int beta) {
 }
 
 
-Lit mrc_gpu_POSIT_heuristic(Miracle *d_mrc, const int n) {
+Lit mrc_gpu_POSIT_heuristic(sat_miracle *sat_mrc, const int n) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     // Clear d_clause_sizes.
     gpuErrchk( cuda_memset_int(dev_clause_sizes, INT_MAX, clause_sizes_len) );
 
@@ -889,23 +902,23 @@ Lit mrc_gpu_POSIT_heuristic(Miracle *d_mrc, const int n) {
 }
 
 
-Lit mrc_gpu_DLIS_heuristic(Miracle *d_mrc) {
-    return DLxS_heuristic(d_mrc, false);
+Lit mrc_gpu_DLIS_heuristic(sat_miracle *sat_mrc) {
+    return DLxS_heuristic(sat_mrc, false);
 }
 
 
-Lit mrc_gpu_DLCS_heuristic(Miracle *d_mrc) {
-    return DLxS_heuristic(d_mrc, true);
+Lit mrc_gpu_DLCS_heuristic(sat_miracle *sat_mrc) {
+    return DLxS_heuristic(sat_mrc, true);
 }
 
 
-Lit mrc_gpu_RDLIS_heuristic(Miracle *d_mrc) {
-    return RDLxS_heuristic(d_mrc, false);
+Lit mrc_gpu_RDLIS_heuristic(sat_miracle *sat_mrc) {
+    return RDLxS_heuristic(sat_mrc, false);
 }
 
 
-Lit mrc_gpu_RDLCS_heuristic(Miracle *d_mrc) {
-    return RDLxS_heuristic(d_mrc, true);
+Lit mrc_gpu_RDLCS_heuristic(sat_miracle *sat_mrc) {
+    return RDLxS_heuristic(sat_mrc, true);
 }
 
 
@@ -1048,7 +1061,9 @@ static void destroy_aux_data_structs() {
 }
 
 
-static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
+static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     // Clear d_lit_weights.
     gpuErrchk( cudaMemset(dev_lit_weights, 0,
                           sizeof *dev_lit_weights * lit_weights_len) );
@@ -1122,7 +1137,9 @@ static Lit JW_xS_heuristic(Miracle *d_mrc, bool two_sided) {
 }
 
 
-static Lit DLxS_heuristic(Miracle *d_mrc, bool dlcs) {
+static Lit DLxS_heuristic(sat_miracle *sat_mrc, bool dlcs) {
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
     // Clear d_lit_occ.
     gpuErrchk( cudaMemset(dev_lit_occ, 0,
                           sizeof *dev_lit_occ * lit_occ_len) );
@@ -1194,17 +1211,17 @@ static Lit DLxS_heuristic(Miracle *d_mrc, bool dlcs) {
 }
 
 
-static Lit RDLxS_heuristic(Miracle *d_mrc, bool rdlcs) {
+static Lit RDLxS_heuristic(sat_miracle *sat_mrc, bool rdlcs) {
     init_PRNG();
 
     if (rdlcs && (rand() % 2)) {
-        return neg_lit(mrc_gpu_DLCS_heuristic(d_mrc));
+        return neg_lit(mrc_gpu_DLCS_heuristic(sat_mrc));
     } else if (rdlcs) {
-        return mrc_gpu_DLCS_heuristic(d_mrc);
+        return mrc_gpu_DLCS_heuristic(sat_mrc);
     } else if (rand() % 2) {
-        return neg_lit(mrc_gpu_DLIS_heuristic(d_mrc));
+        return neg_lit(mrc_gpu_DLIS_heuristic(sat_mrc));
     } else {
-        return mrc_gpu_DLIS_heuristic(d_mrc);
+        return mrc_gpu_DLIS_heuristic(sat_mrc);
     }
 }
 

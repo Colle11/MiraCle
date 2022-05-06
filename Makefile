@@ -28,7 +28,7 @@ $(BUILD_DIR)/miracle.o: $(BIN_DIR) $(SRC_DIR)/miracle.cuh $(SRC_DIR)/miracle.cu 
 $(BUILD_DIR)/miracle_dynamic.o: $(BIN_DIR) $(SRC_DIR)/miracle_dynamic.cuh $(SRC_DIR)/miracle_dynamic.cu $(SRC_DIR)/cnf_formula.cuh $(SRC_DIR)/utils.cuh
 	$(NVCC) $(NVCCFLAGS) -c $(SRC_DIR)/miracle_dynamic.cu -o $@
 
-$(BUILD_DIR)/miracle_gpu.o: $(BIN_DIR) $(SRC_DIR)/miracle_gpu.cuh $(SRC_DIR)/miracle_gpu.cu $(SRC_DIR)/cnf_formula_gpu.cuh $(SRC_DIR)/miracle.cuh $(SRC_DIR)/utils.cuh $(SRC_DIR)/launch_parameters_gpu.cuh
+$(BUILD_DIR)/miracle_gpu.o: $(BIN_DIR) $(SRC_DIR)/miracle_gpu.cuh $(SRC_DIR)/miracle_gpu.cu $(SRC_DIR)/cnf_formula_gpu.cuh $(SRC_DIR)/miracle.cuh $(SRC_DIR)/sat_miracle.cuh $(SRC_DIR)/utils.cuh $(SRC_DIR)/launch_parameters_gpu.cuh
 	$(NVCC) $(NVCCFLAGS) -c $(SRC_DIR)/miracle_gpu.cu -o $@
 
 $(BUILD_DIR)/sat_miracle.o: $(BIN_DIR) $(SRC_DIR)/sat_miracle.cuh $(SRC_DIR)/sat_miracle.cu $(SRC_DIR)/miracle.cuh $(SRC_DIR)/miracle_gpu.cuh

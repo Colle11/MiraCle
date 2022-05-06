@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     printf("**************************************************************\n");
     printf("\n");
 
-    SAT_Miracle *sat_mrc = mrc_create_sat_miracle(filename, false);
+    SAT_Miracle *sat_mrc = mrc_create_sat_miracle(filename, true);
 
     mrc_assign_lits(lits, lits_len, sat_mrc);
 
@@ -124,29 +124,27 @@ int main(int argc, char *argv[]) {
     printf("**************************************************************\n");
     printf("\n");
 
-    // Miracle *d_mrc = mrc_gpu_transfer_miracle_host_to_dev(mrc);
+    mrc_gpu_assign_lits(lits, lits_len, sat_mrc);
+
+    Lit JW_OS_blit_gpu = mrc_gpu_JW_OS_heuristic(sat_mrc);
+    Lit JW_TS_blit_gpu = mrc_gpu_JW_TS_heuristic(sat_mrc);
+    Lit BOHM_blit_gpu = mrc_gpu_BOHM_heuristic(sat_mrc, BOHM_alpha, BOHM_beta);
+    Lit POSIT_blit_gpu = mrc_gpu_POSIT_heuristic(sat_mrc, POSIT_n);
+    Lit DLIS_blit_gpu = mrc_gpu_DLIS_heuristic(sat_mrc);
+    Lit DLCS_blit_gpu = mrc_gpu_DLCS_heuristic(sat_mrc);
+    Lit RDLIS_blit_gpu = mrc_gpu_RDLIS_heuristic(sat_mrc);
+    Lit RDLCS_blit_gpu = mrc_gpu_RDLCS_heuristic(sat_mrc);
     
-    // mrc_destroy_miracle(mrc);
+    printf("JW-OS branching literal GPU = %d\n", JW_OS_blit_gpu);
+    printf("JW-TS branching literal GPU = %d\n", JW_TS_blit_gpu);
+    printf("BOHM branching literal GPU = %d\n", BOHM_blit_gpu);
+    printf("POSIT branching literal GPU = %d\n", POSIT_blit_gpu);
+    printf("DLIS branching literal GPU = %d\n", DLIS_blit_gpu);
+    printf("DLCS branching literal GPU = %d\n", DLCS_blit_gpu);
+    printf("RDLIS branching literal GPU = %d\n", RDLIS_blit_gpu);
+    printf("RDLCS branching literal GPU = %d\n", RDLCS_blit_gpu);
     
-    // Lit JW_OS_blit_gpu = mrc_gpu_JW_OS_heuristic(d_mrc);
-    // Lit JW_TS_blit_gpu = mrc_gpu_JW_TS_heuristic(d_mrc);
-    // Lit BOHM_blit_gpu = mrc_gpu_BOHM_heuristic(d_mrc, BOHM_alpha, BOHM_beta);
-    // Lit POSIT_blit_gpu = mrc_gpu_POSIT_heuristic(d_mrc, POSIT_n);
-    // Lit DLIS_blit_gpu = mrc_gpu_DLIS_heuristic(d_mrc);
-    // Lit DLCS_blit_gpu = mrc_gpu_DLCS_heuristic(d_mrc);
-    // Lit RDLIS_blit_gpu = mrc_gpu_RDLIS_heuristic(d_mrc);
-    // Lit RDLCS_blit_gpu = mrc_gpu_RDLCS_heuristic(d_mrc);
-    
-    // printf("JW-OS branching literal GPU = %d\n", JW_OS_blit_gpu);
-    // printf("JW-TS branching literal GPU = %d\n", JW_TS_blit_gpu);
-    // printf("BOHM branching literal GPU = %d\n", BOHM_blit_gpu);
-    // printf("POSIT branching literal GPU = %d\n", POSIT_blit_gpu);
-    // printf("DLIS branching literal GPU = %d\n", DLIS_blit_gpu);
-    // printf("DLCS branching literal GPU = %d\n", DLCS_blit_gpu);
-    // printf("RDLIS branching literal GPU = %d\n", RDLIS_blit_gpu);
-    // printf("RDLCS branching literal GPU = %d\n", RDLCS_blit_gpu);
-    
-    // mrc_gpu_destroy_miracle(d_mrc);
+    mrc_destroy_sat_miracle(sat_mrc);
     
     printf("\n");
     printf("**************************************************************\n");

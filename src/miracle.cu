@@ -14,6 +14,7 @@
 
 
 #include "miracle.cuh"
+#include "sat_miracle.cuh"
 #include "utils.cuh"
 
 
@@ -212,7 +213,9 @@ void mrc_print_miracle(Miracle *mrc) {
 }
 
 
-void mrc_assign_lits(Lit *lits, int lits_len, Miracle *mrc) {
+void mrc_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc) {
+    Miracle *mrc = sat_mrc->mrc;
+
     Lit lit;
     Var var;
     bool pol;
@@ -512,7 +515,7 @@ Lit mrc_POSIT_heuristic(Miracle *mrc, const int n) {
                     lc_min_pos_lidx = lit_occ[pos_lidx];
                     lc_min_neg_lidx = lit_occ[neg_lidx];
                     weight = lc_min_pos_lidx * lc_min_neg_lidx *
-                             (int)(pow(2, n) + 0.5) +
+                             (int)(exp2f((float)n) + 0.5) +
                              lc_min_pos_lidx + lc_min_neg_lidx;
                     
                     if (weight > greatest_weight
@@ -649,6 +652,8 @@ static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided) {
                 }
             }
 
+            weight = exp2f((float)-c_size);
+
             for (int l = mrc->phi->clause_indices[c];
                  l < mrc->phi->clause_indices[c+1];
                  l++) {
@@ -656,7 +661,7 @@ static Lit JW_xS_heuristic(Miracle *mrc, bool two_sided) {
                 var = lidx_to_var(lidx);
 
                 if (!(mrc->var_ass[var])) {
-                    lit_weights[lidx] += powf(2.0, (float)-c_size);
+                    lit_weights[lidx] += weight;
                 }
             }
         }

@@ -1335,7 +1335,7 @@ __global__ void JW_weigh_lits_unres_clauses_krn(Miracle *mrc) {
                 }
             }
             
-            weight = powf(2.0, (float)-c_size);
+            weight = exp2f((float)-c_size);
 
             for (int l = mrc->phi->clause_indices[gid];
                  l < mrc->phi->clause_indices[gid+1];
@@ -1455,7 +1455,7 @@ __global__ void POSIT_weigh_vars_smallest_unres_clauses_krn(Miracle *mrc,
 
             d_var_weights[gid] = (float)
                                  (lc_s_pos_lidx * lc_s_neg_lidx *
-                                  (int)(pow(2, n) + 0.5) +
+                                  (int)(exp2f((float)n) + 0.5) +
                                   lc_s_pos_lidx + lc_s_neg_lidx);
         }
     }

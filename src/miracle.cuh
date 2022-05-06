@@ -12,6 +12,9 @@
 #include "cnf_formula.cuh"
 
 
+struct sat_miracle;
+
+
 /**
  * @brief Miracle data type.
  */
@@ -88,10 +91,10 @@ void mrc_print_miracle(Miracle *mrc);
  * @param [in]lits An array of assigned literals.
  * @param [in]lits_len Length of lits, which is the number of assigned
  * literals.
- * @param [in/out]mrc A miracle.
+ * @param [in/out]sat_mrc A sat_miracle.
  * @retval None.
  */
-void mrc_assign_lits(Lit *lits, int lits_len, Miracle *mrc);
+void mrc_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc);
 
 
 /**

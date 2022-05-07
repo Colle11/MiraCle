@@ -126,6 +126,8 @@ int main(int argc, char *argv[]) {
 
     mrc_gpu_assign_lits(lits, lits_len, sat_mrc);
 
+    // mrc_sync_sat_miracle(sat_mrc, true);
+
     Lit JW_OS_blit_gpu = mrc_gpu_JW_OS_heuristic(sat_mrc);
     Lit JW_TS_blit_gpu = mrc_gpu_JW_TS_heuristic(sat_mrc);
     Lit BOHM_blit_gpu = mrc_gpu_BOHM_heuristic(sat_mrc, BOHM_alpha, BOHM_beta);

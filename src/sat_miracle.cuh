@@ -58,4 +58,15 @@ void mrc_destroy_sat_miracle(SAT_Miracle *sat_mrc);
 void mrc_print_sat_miracle(SAT_Miracle *sat_mrc);
 
 
+/**
+ * @brief Synchronizes the host and device miracle.
+ * 
+ * @param [in/out]sat_mrc A sat_miracle.
+ * @param [in]host_to_dev A flag to synchronize the miracle from host to device
+ * or vice versa.
+ * @retval None.
+ */
+void mrc_sync_sat_miracle(SAT_Miracle *sat_mrc, bool host_to_dev);
+
+
 #endif

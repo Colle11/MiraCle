@@ -45,3 +45,23 @@ void mrc_destroy_sat_miracle(SAT_Miracle *sat_mrc) {
 void mrc_print_sat_miracle(SAT_Miracle *sat_mrc) {
     mrc_print_miracle(sat_mrc->mrc);
 }
+
+
+void mrc_sync_sat_miracle(SAT_Miracle *sat_mrc, bool host_to_dev) {
+    Miracle *mrc = sat_mrc->mrc;
+    Miracle *d_mrc = sat_mrc->d_mrc;
+
+    if (host_to_dev) {
+        if (d_mrc != NULL) {
+            mrc_gpu_destroy_miracle(d_mrc);
+        }
+
+        sat_mrc->d_mrc = mrc_gpu_transfer_miracle_host_to_dev(mrc);
+    } else {
+        if (mrc != NULL) {
+            mrc_destroy_miracle(mrc);
+        }
+
+        sat_mrc->mrc = mrc_gpu_transfer_miracle_dev_to_host(d_mrc);
+    }
+}

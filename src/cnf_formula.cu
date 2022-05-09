@@ -132,17 +132,20 @@ CNF_Formula *cnf_parse_DIMACS(char *filename) {
         }
     }
 
-    phi->clause_indices[phi->num_clauses] = phi->num_lits;
+    int num_lits = phi->num_lits;
+    int num_clauses = phi->num_clauses;
+
+    phi->clause_indices[num_clauses] = num_lits;
 
     // Adapt the memory of phi->clauses.
     phi->clauses = (Lidx *)realloc(phi->clauses,
-                                   sizeof *(phi->clauses) * phi->num_lits);
-    phi->clauses_len = phi->num_lits;
+                                   sizeof *(phi->clauses) * num_lits);
+    phi->clauses_len = num_lits;
 
     fclose(fp);
 
     // Check the correctness of the problem line.
-    if (p_num_vars != phi->num_vars || p_num_clauses != phi->num_clauses) {
+    if (p_num_vars != phi->num_vars || p_num_clauses != num_clauses) {
         fprintf(stderr, "The problem line of the DIMACS CNF file \"%s\" is "
                 "incorrect.\n", filename);
         exit(EXIT_FAILURE);
@@ -177,14 +180,18 @@ void cnf_print_formula(CNF_Formula *phi) {
     printf("Number of literals: %d\n", phi->num_lits);
 
     printf("Clause indices: ");
-    for (int i = 0; i < phi->clause_indices_len; i++) {
-        printf("[%d]%d ", i, phi->clause_indices[i]);
+    int clause_indices_len = phi->clause_indices_len;
+    int *clause_indices = phi->clause_indices;
+    for (int i = 0; i < clause_indices_len; i++) {
+        printf("[%d]%d ", i, clause_indices[i]);
     }
     printf("\n");
 
     printf("Clauses: ");
-    for (int l = 0; l < phi->clauses_len; l++) {
-        printf("[%d]%d ", l, phi->clauses[l]);
+    int clauses_len = phi->clauses_len;
+    Lidx *clauses = phi->clauses;
+    for (int l = 0; l < clauses_len; l++) {
+        printf("[%d]%d ", l, clauses[l]);
     }
     printf("\n");
 

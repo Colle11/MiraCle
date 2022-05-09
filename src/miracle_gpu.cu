@@ -502,23 +502,25 @@ Miracle *mrc_gpu_transfer_miracle_host_to_dev(Miracle *mrc) {
                           cudaMemcpyHostToDevice) );
 
     int *d_var_ass;
+    int var_ass_len = mrc->var_ass_len;
     gpuErrchk( cudaMalloc((void**)&d_var_ass,
-                          sizeof *d_var_ass * mrc->var_ass_len) );
+                          sizeof *d_var_ass * var_ass_len) );
     gpuErrchk( cudaMemcpy(&(d_mrc->var_ass), &d_var_ass,
                           sizeof d_var_ass,
                           cudaMemcpyHostToDevice) );
     gpuErrchk( cudaMemcpy(d_var_ass, mrc->var_ass,
-                          sizeof *d_var_ass * mrc->var_ass_len,
+                          sizeof *d_var_ass * var_ass_len,
                           cudaMemcpyHostToDevice) );
 
     int *d_clause_sat;
+    int clause_sat_len = mrc->clause_sat_len;
     gpuErrchk( cudaMalloc((void**)&d_clause_sat,
-                          sizeof *d_clause_sat * mrc->clause_sat_len) );
+                          sizeof *d_clause_sat * clause_sat_len) );
     gpuErrchk( cudaMemcpy(&(d_mrc->clause_sat), &d_clause_sat,
                           sizeof d_clause_sat,
                           cudaMemcpyHostToDevice) );
     gpuErrchk( cudaMemcpy(d_clause_sat, mrc->clause_sat,
-                          sizeof *d_clause_sat * mrc->clause_sat_len,
+                          sizeof *d_clause_sat * clause_sat_len,
                           cudaMemcpyHostToDevice) );
 
     init_aux_data_structs(mrc);
@@ -539,23 +541,25 @@ Miracle *mrc_gpu_transfer_miracle_dev_to_host(Miracle *d_mrc) {
                           cudaMemcpyDeviceToHost) );
     mrc->phi = cnf_gpu_transfer_formula_dev_to_host(d_phi);
 
-    mrc->var_ass = (int *)malloc(sizeof *(mrc->var_ass) * mrc->var_ass_len);
+    int var_ass_len = mrc->var_ass_len;
+    mrc->var_ass = (int *)malloc(sizeof *(mrc->var_ass) * var_ass_len);
     int *d_var_ass;
     gpuErrchk( cudaMemcpy(&d_var_ass, &(d_mrc->var_ass),
                           sizeof d_var_ass,
                           cudaMemcpyDeviceToHost) );
     gpuErrchk( cudaMemcpy(mrc->var_ass, d_var_ass,
-                          sizeof *d_var_ass * mrc->var_ass_len,
+                          sizeof *d_var_ass * var_ass_len,
                           cudaMemcpyDeviceToHost) );
 
+    int clause_sat_len = mrc->clause_sat_len;
     mrc->clause_sat = (int *)malloc(sizeof *(mrc->clause_sat) *
-                                    mrc->clause_sat_len);
+                                    clause_sat_len);
     int *d_clause_sat;
     gpuErrchk( cudaMemcpy(&d_clause_sat, &(d_mrc->clause_sat),
                           sizeof d_clause_sat,
                           cudaMemcpyDeviceToHost) );
     gpuErrchk( cudaMemcpy(mrc->clause_sat, d_clause_sat,
-                          sizeof *d_clause_sat * mrc->clause_sat_len,
+                          sizeof *d_clause_sat * clause_sat_len,
                           cudaMemcpyDeviceToHost) );
 
     return mrc;
@@ -588,6 +592,9 @@ void mrc_gpu_destroy_miracle(Miracle *d_mrc) {
 
 
 void mrc_gpu_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc) {
+    int num_blks_num_clauses = sat_mrc->num_blks_num_clauses;
+    int num_thds_per_blk = sat_mrc->num_thds_per_blk;
+
     Miracle *d_mrc = sat_mrc->d_mrc;
 
     // Set d_lits_len and d_lits.
@@ -599,24 +606,15 @@ void mrc_gpu_assign_lits(Lit *lits, int lits_len, sat_miracle *sat_mrc) {
                           cudaMemcpyHostToDevice) );
 
     // Update device variable assignments.
-    int num_blks = gpu_num_blocks(lits_len);
-    int num_thds_per_blk = gpu_num_threads_per_block();
+    int num_blks_lits_len = gpu_num_blocks(lits_len);
 
-    update_var_ass_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    update_var_ass_krn<<<num_blks_lits_len, num_thds_per_blk>>>(d_mrc);
     
     gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Update device clause satisfiability.
-    int clause_sat_len;
-    gpuErrchk( cudaMemcpy(&clause_sat_len, &(d_mrc->clause_sat_len),
-                          sizeof clause_sat_len,
-                          cudaMemcpyDeviceToHost) );
+    update_clause_sat_krn<<<num_blks_num_clauses, num_thds_per_blk>>>(d_mrc);
 
-    num_blks = gpu_num_blocks(clause_sat_len);
-    num_thds_per_blk = gpu_num_threads_per_block();
-
-    update_clause_sat_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
-    
     gpuErrchkPALE( cudaPeekAtLastError() );
 }
 
@@ -631,30 +629,25 @@ void mrc_gpu_increase_decision_level(sat_miracle *sat_mrc) {
 
 
 void mrc_gpu_backjump(int bj_dec_lvl, sat_miracle *sat_mrc) {
+    int num_blks_num_clauses = sat_mrc->num_blks_num_clauses;
+    int num_blks_num_vars = sat_mrc->num_blks_num_vars;
+    int num_thds_per_blk = sat_mrc->num_thds_per_blk;
+
     Miracle *d_mrc = sat_mrc->d_mrc;
 
     // Restore device clause satisfiability.
-    int clause_sat_len;
-    gpuErrchk( cudaMemcpy(&clause_sat_len, &(d_mrc->clause_sat_len),
-                          sizeof clause_sat_len,
-                          cudaMemcpyDeviceToHost) );
-    
-    int num_blks = gpu_num_blocks(clause_sat_len);
-    int num_thds_per_blk = gpu_num_threads_per_block();
-
-    restore_clause_sat_krn<<<num_blks, num_thds_per_blk>>>(bj_dec_lvl, d_mrc);
+    restore_clause_sat_krn<<<num_blks_num_clauses, num_thds_per_blk>>>(
+                                                                    bj_dec_lvl,
+                                                                    d_mrc
+                                                                      );
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Restore device variable assignments.
-    int var_ass_len;
-    gpuErrchk( cudaMemcpy(&var_ass_len, &(d_mrc->var_ass_len),
-                          sizeof var_ass_len,
-                          cudaMemcpyDeviceToHost) );
-    num_blks = gpu_num_blocks(var_ass_len);
-    num_thds_per_blk = gpu_num_threads_per_block();
-    
-    restore_var_ass_krn<<<num_blks, num_thds_per_blk>>>(bj_dec_lvl, d_mrc);
+    restore_var_ass_krn<<<num_blks_num_vars, num_thds_per_blk>>>(
+                                                                bj_dec_lvl,
+                                                                d_mrc
+                                                                );
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -678,13 +671,14 @@ Lit mrc_gpu_JW_TS_heuristic(sat_miracle *sat_mrc) {
 Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
                            const int alpha,
                            const int beta) {
+    int num_blks_num_vars = sat_mrc->num_blks_num_vars;
+    int num_blks_num_clauses = sat_mrc->num_blks_num_clauses;
+    int num_thds_per_blk = sat_mrc->num_thds_per_blk;
+
     Miracle *d_mrc = sat_mrc->d_mrc;
 
     // Init d_var_availability.
-    int num_blks = gpu_num_blocks(var_availability_len);
-    int num_thds_per_blk = gpu_num_threads_per_block();
-
-    init_var_availability_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    init_var_availability_krn<<<num_blks_num_vars, num_thds_per_blk>>>(d_mrc);
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -697,18 +691,14 @@ Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
                           sizeof *dev_clause_sizes * clause_sizes_len) );
 
     // Compute the clause sizes.
-    num_blks = gpu_num_blocks(clause_sizes_len);
-    num_thds_per_blk = gpu_num_threads_per_block();
-
-    compute_clause_sizes_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    compute_clause_sizes_krn<<<num_blks_num_clauses, num_thds_per_blk>>>(
+                                                                        d_mrc
+                                                                        );
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Init d_clause_idxs.
-    num_blks = gpu_num_blocks(clause_idxs_len);
-    num_thds_per_blk = gpu_num_threads_per_block();
-
-    init_clause_idxs_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    init_clause_idxs_krn<<<num_blks_num_clauses, num_thds_per_blk>>>(d_mrc);
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -758,6 +748,7 @@ Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
 
     int num_clauses_same_size;      // Number of clauses having the same size.
     float greatest_v_weight;        // Greatest variable weight.
+    int num_blks_num_clauses_same_size;
 
     for (int i = min_c_size == 0 ? 1 : 0;
          i < clause_indices_len - 1;
@@ -770,21 +761,20 @@ Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
         gpuErrchk( cuda_memset_float(dev_var_weights, -1.0, var_weights_len) );
 
         num_clauses_same_size = clause_indices[i+1] - clause_indices[i];
-        num_blks = gpu_num_blocks(num_clauses_same_size);
-        num_thds_per_blk = gpu_num_threads_per_block();
-
-        count_lits_unres_clauses_same_size_krn<<<num_blks,
-                                                 num_thds_per_blk>>>(
-                                                        d_mrc,
-                                                        num_clauses_same_size,
-                                                        i);
+        num_blks_num_clauses_same_size = gpu_num_blocks(num_clauses_same_size);
+        
+        count_lits_unres_clauses_same_size_krn<<<
+                                                num_blks_num_clauses_same_size,
+                                                num_thds_per_blk
+                                              >>>(
+                                                d_mrc,
+                                                num_clauses_same_size,
+                                                i
+                                                 );
 
         gpuErrchkPALE( cudaPeekAtLastError() );
 
-        num_blks = gpu_num_blocks(var_weights_len);
-        num_thds_per_blk = gpu_num_threads_per_block();
-
-        BOHM_weigh_vars_unres_clauses_same_size_krn<<<num_blks,
+        BOHM_weigh_vars_unres_clauses_same_size_krn<<<num_blks_num_vars,
                                                       num_thds_per_blk>>>(
                                                                     d_mrc,
                                                                     alpha,
@@ -795,12 +785,10 @@ Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
 
         greatest_v_weight = find_max_float(dev_var_weights, var_weights_len);
 
-        num_blks = gpu_num_blocks(var_availability_len);
-        num_thds_per_blk = gpu_num_threads_per_block();
-
-        BOHM_update_var_availability_krn<<<num_blks, num_thds_per_blk>>>(
+        BOHM_update_var_availability_krn<<<num_blks_num_vars,
+                                           num_thds_per_blk>>>(
                                                             greatest_v_weight
-                                                                        );
+                                                              );
 
         gpuErrchkPALE( cudaPeekAtLastError() );
     }
@@ -831,15 +819,18 @@ Lit mrc_gpu_BOHM_heuristic(sat_miracle *sat_mrc,
 
 
 Lit mrc_gpu_POSIT_heuristic(sat_miracle *sat_mrc, const int n) {
+    int num_blks_num_vars = sat_mrc->num_blks_num_vars;
+    int num_blks_num_clauses = sat_mrc->num_blks_num_clauses;
+    int num_thds_per_blk = sat_mrc->num_thds_per_blk;
+
     Miracle *d_mrc = sat_mrc->d_mrc;
 
     // Clear d_clause_sizes.
     gpuErrchk( cuda_memset_int(dev_clause_sizes, INT_MAX, clause_sizes_len) );
 
-    int num_blks = gpu_num_blocks(clause_sizes_len);
-    int num_thds_per_blk = gpu_num_threads_per_block();
-
-    compute_clause_sizes_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    compute_clause_sizes_krn<<<num_blks_num_clauses, num_thds_per_blk>>>(
+                                                                        d_mrc
+                                                                        );
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -850,30 +841,22 @@ Lit mrc_gpu_POSIT_heuristic(sat_miracle *sat_mrc, const int n) {
     gpuErrchk( cudaMemset(dev_lit_occ, 0,
                           sizeof *dev_lit_occ * lit_occ_len) );
 
-    int clause_sat_len;
-    gpuErrchk( cudaMemcpy(&clause_sat_len, &(d_mrc->clause_sat_len),
-                          sizeof clause_sat_len,
-                          cudaMemcpyDeviceToHost) );
-
-    num_blks = gpu_num_blocks(clause_sat_len);
-    num_thds_per_blk = gpu_num_threads_per_block();
-
-    count_lits_smallest_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(
+    count_lits_smallest_unres_clauses_krn<<<num_blks_num_clauses,
+                                            num_thds_per_blk>>>(
                                                                 d_mrc,
                                                                 smallest_c_size
-                                                                         );
+                                                               );
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
     // Clear d_var_weights.
     gpuErrchk( cuda_memset_float(dev_var_weights, -1.0, var_weights_len) );
 
-    num_blks = gpu_num_blocks(var_weights_len);
-    num_thds_per_blk = gpu_num_threads_per_block();
-
-    POSIT_weigh_vars_smallest_unres_clauses_krn<<<num_blks,
-                                                  num_thds_per_blk>>>(d_mrc,
-                                                                      n);
+    POSIT_weigh_vars_smallest_unres_clauses_krn<<<num_blks_num_vars,
+                                                  num_thds_per_blk>>>(
+                                                                    d_mrc,
+                                                                    n
+                                                                     );
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -928,13 +911,18 @@ Lit mrc_gpu_RDLCS_heuristic(sat_miracle *sat_mrc) {
 
 
 static void init_aux_data_structs(Miracle *mrc) {
+    CNF_Formula *phi = mrc->phi;
+    int num_vars = phi->num_vars;
+    int num_clauses = phi->num_clauses;
+    int num_varpols = num_vars * 2;
+
     gpuErrchk( cudaMalloc((void**)&dev_lits,
-                          sizeof *dev_lits * mrc->phi->num_vars) );
+                          sizeof *dev_lits * num_vars) );
     gpuErrchk( cudaMemcpyToSymbol(d_lits, &dev_lits,
                                   sizeof dev_lits, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    lit_occ_len = mrc->phi->num_vars * 2;
+    lit_occ_len = num_varpols;
     gpuErrchk( cudaMemcpyToSymbol(d_lit_occ_len, &lit_occ_len,
                                   sizeof lit_occ_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -944,7 +932,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_lit_occ, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    cum_lit_occ_len = mrc->phi->num_vars * 2;
+    cum_lit_occ_len = num_varpols;
     gpuErrchk( cudaMemcpyToSymbol(d_cum_lit_occ_len, &cum_lit_occ_len,
                                   sizeof cum_lit_occ_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -954,7 +942,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_cum_lit_occ, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    lit_weights_len = mrc->phi->num_vars * 2;
+    lit_weights_len = num_varpols;
     gpuErrchk( cudaMemcpyToSymbol(d_lit_weights_len, &lit_weights_len,
                                   sizeof lit_weights_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -964,7 +952,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_lit_weights, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    var_occ_len = mrc->phi->num_vars;
+    var_occ_len = num_vars;
     gpuErrchk( cudaMemcpyToSymbol(d_var_occ_len, &var_occ_len,
                                   sizeof var_occ_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -974,7 +962,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_var_occ, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    var_weights_len = mrc->phi->num_vars;
+    var_weights_len = num_vars;
     gpuErrchk( cudaMemcpyToSymbol(d_var_weights_len, &var_weights_len,
                                   sizeof var_weights_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -984,7 +972,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_var_weights, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    var_availability_len = mrc->phi->num_vars;
+    var_availability_len = num_vars;
     gpuErrchk( cudaMemcpyToSymbol(d_var_availability_len,
                                   &var_availability_len,
                                   sizeof var_availability_len, 0UL,
@@ -996,7 +984,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_var_availability, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    clause_sizes_len = mrc->phi->num_clauses;
+    clause_sizes_len = num_clauses;
     gpuErrchk( cudaMemcpyToSymbol(d_clause_sizes_len, &clause_sizes_len,
                                   sizeof clause_sizes_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -1011,7 +999,7 @@ static void init_aux_data_structs(Miracle *mrc) {
                                   sizeof dev_clause_sizes_copy, 0UL,
                                   cudaMemcpyHostToDevice) );
 
-    clause_idxs_len = mrc->phi->num_clauses;
+    clause_idxs_len = num_clauses;
     gpuErrchk( cudaMemcpyToSymbol(d_clause_idxs_len, &clause_idxs_len,
                                   sizeof clause_idxs_len, 0UL,
                                   cudaMemcpyHostToDevice) );
@@ -1062,21 +1050,18 @@ static void destroy_aux_data_structs() {
 
 
 static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided) {
+    int num_blks_num_vars = sat_mrc->num_blks_num_vars;
+    int num_blks_num_clauses = sat_mrc->num_blks_num_clauses;
+    int num_thds_per_blk = sat_mrc->num_thds_per_blk;
+
     Miracle *d_mrc = sat_mrc->d_mrc;
 
     // Clear d_lit_weights.
     gpuErrchk( cudaMemset(dev_lit_weights, 0,
                           sizeof *dev_lit_weights * lit_weights_len) );
 
-    int clause_sat_len;
-    gpuErrchk( cudaMemcpy(&clause_sat_len, &(d_mrc->clause_sat_len),
-                          sizeof clause_sat_len,
-                          cudaMemcpyDeviceToHost) );
-
-    int num_blks = gpu_num_blocks(clause_sat_len);
-    int num_thds_per_blk = gpu_num_threads_per_block();
-
-    JW_weigh_lits_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    JW_weigh_lits_unres_clauses_krn<<<num_blks_num_clauses,
+                                      num_thds_per_blk>>>(d_mrc);
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -1086,10 +1071,7 @@ static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided) {
         // Clear d_var_weights.
         gpuErrchk( cuda_memset_float(dev_var_weights, -1.0, var_weights_len) );
 
-        int num_blks = gpu_num_blocks(var_weights_len);
-        int num_thds_per_blk = gpu_num_threads_per_block();
-
-        JW_TS_weigh_vars_unres_clauses_krn<<<num_blks,
+        JW_TS_weigh_vars_unres_clauses_krn<<<num_blks_num_vars,
                                              num_thds_per_blk>>>(d_mrc);
 
         gpuErrchkPALE( cudaPeekAtLastError() );
@@ -1138,21 +1120,18 @@ static Lit JW_xS_heuristic(sat_miracle *sat_mrc, bool two_sided) {
 
 
 static Lit DLxS_heuristic(sat_miracle *sat_mrc, bool dlcs) {
+    int num_blks_num_vars = sat_mrc->num_blks_num_vars;
+    int num_blks_num_clauses = sat_mrc->num_blks_num_clauses;
+    int num_thds_per_blk = sat_mrc->num_thds_per_blk;
+
     Miracle *d_mrc = sat_mrc->d_mrc;
 
     // Clear d_lit_occ.
     gpuErrchk( cudaMemset(dev_lit_occ, 0,
                           sizeof *dev_lit_occ * lit_occ_len) );
 
-    int clause_sat_len;
-    gpuErrchk( cudaMemcpy(&clause_sat_len, &(d_mrc->clause_sat_len),
-                          sizeof clause_sat_len,
-                          cudaMemcpyDeviceToHost) );
-
-    int num_blks = gpu_num_blocks(clause_sat_len);
-    int num_thds_per_blk = gpu_num_threads_per_block();
-
-    count_lits_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+    count_lits_unres_clauses_krn<<<num_blks_num_clauses,
+                                   num_thds_per_blk>>>(d_mrc);
 
     gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -1162,10 +1141,8 @@ static Lit DLxS_heuristic(sat_miracle *sat_mrc, bool dlcs) {
         // Clear d_var_occ.
         gpuErrchk( cuda_memset_int(dev_var_occ, -1, var_occ_len) );
 
-        int num_blks = gpu_num_blocks(var_occ_len);
-        int num_thds_per_blk = gpu_num_threads_per_block();
-
-        count_vars_unres_clauses_krn<<<num_blks, num_thds_per_blk>>>(d_mrc);
+        count_vars_unres_clauses_krn<<<num_blks_num_vars,
+                                       num_thds_per_blk>>>(d_mrc);
 
         gpuErrchkPALE( cudaPeekAtLastError() );
 
@@ -1236,17 +1213,19 @@ __global__ void update_var_ass_krn(Miracle *mrc) {
     int stride = blockDim.x * gridDim.x;
 
     int lits_lgth = d_lits_len;
+    Lit *lits = d_lits;
     Lit lit;
     Var var;
     bool pol;
     int dec_lvl = mrc->dec_lvl;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < lits_lgth; gid += stride) {
-        lit = d_lits[gid];
+        lit = lits[gid];
         var = lit_to_var(lit);
         pol = lit_to_pol(lit);
 
-        mrc->var_ass[var] = pol ? dec_lvl : -(dec_lvl);
+        var_ass[var] = pol ? dec_lvl : -(dec_lvl);
     }
 }
 
@@ -1260,19 +1239,24 @@ __global__ void update_clause_sat_krn(Miracle *mrc) {
     Var var;
     bool pol;
     int dec_lvl = mrc->dec_lvl;
+    int *clause_sat = mrc->clause_sat;
+    CNF_Formula *phi = mrc->phi;
+    int *phi_clause_indices = phi->clause_indices;
+    Lidx *phi_clauses = phi->clauses;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < clause_sat_lgth; gid += stride) {
-        if (!(mrc->clause_sat[gid])) {
-            for (int l = mrc->phi->clause_indices[gid];
-                 l < mrc->phi->clause_indices[gid+1];
+        if (!(clause_sat[gid])) {
+            for (int l = phi_clause_indices[gid];
+                 l < phi_clause_indices[gid+1];
                  l++) {
-                lidx = mrc->phi->clauses[l];
+                lidx = phi_clauses[l];
                 var = lidx_to_var(lidx);
                 pol = lidx_to_pol(lidx);
 
-                if ((pol && mrc->var_ass[var] > 0) ||
-                    (!pol && mrc->var_ass[var] < 0)) {
-                    mrc->clause_sat[gid] = dec_lvl;
+                if ((pol && var_ass[var] > 0) ||
+                    (!pol && var_ass[var] < 0)) {
+                    clause_sat[gid] = dec_lvl;
                     break;
                 }
             }
@@ -1295,10 +1279,11 @@ __global__ void restore_clause_sat_krn(int bj_dec_lvl, Miracle *mrc) {
     int stride = blockDim.x * gridDim.x;
 
     int clause_sat_lgth = mrc->clause_sat_len;
+    int *clause_sat = mrc->clause_sat;
 
     for (; gid < clause_sat_lgth; gid += stride) {
-        if (mrc->clause_sat[gid] > bj_dec_lvl) {
-            mrc->clause_sat[gid] = 0;
+        if (clause_sat[gid] > bj_dec_lvl) {
+            clause_sat[gid] = 0;
         }
     }
 }
@@ -1309,10 +1294,11 @@ __global__ void restore_var_ass_krn(int bj_dec_lvl, Miracle *mrc) {
     int stride = blockDim.x * gridDim.x;
 
     int var_ass_lgth = mrc->var_ass_len;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < var_ass_lgth; gid += stride) {
-        if (abs(mrc->var_ass[gid]) > bj_dec_lvl) {
-            mrc->var_ass[gid] = 0;
+        if (abs(var_ass[gid]) > bj_dec_lvl) {
+            var_ass[gid] = 0;
         }
     }
 }
@@ -1336,31 +1322,36 @@ __global__ void JW_weigh_lits_unres_clauses_krn(Miracle *mrc) {
     Lidx lidx;
     Var var;
     float weight;
+    int *clause_sat = mrc->clause_sat;
+    CNF_Formula *phi = mrc->phi;
+    int *phi_clause_indices = phi->clause_indices;
+    Lidx *phi_clauses = phi->clauses;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < clause_sat_lgth; gid += stride) {
-        if (!(mrc->clause_sat[gid])) {
+        if (!(clause_sat[gid])) {
             c_size = 0;
 
-            for (int l = mrc->phi->clause_indices[gid];
-                 l < mrc->phi->clause_indices[gid+1];
+            for (int l = phi_clause_indices[gid];
+                 l < phi_clause_indices[gid+1];
                  l++) {
-                lidx = mrc->phi->clauses[l];
+                lidx = phi_clauses[l];
                 var = lidx_to_var(lidx);
 
-                if (!(mrc->var_ass[var])) {
+                if (!(var_ass[var])) {
                     c_size++;
                 }
             }
             
             weight = exp2f((float)-c_size);
 
-            for (int l = mrc->phi->clause_indices[gid];
-                 l < mrc->phi->clause_indices[gid+1];
+            for (int l = phi_clause_indices[gid];
+                 l < phi_clause_indices[gid+1];
                  l++) {
-                lidx = mrc->phi->clauses[l];
+                lidx = phi_clauses[l];
                 var = lidx_to_var(lidx);
 
-                if (!(mrc->var_ass[var])) {
+                if (!(var_ass[var])) {
                     atomicAdd(&(d_lit_weights[lidx]), weight);
                 }
             }
@@ -1378,9 +1369,10 @@ __global__ void JW_TS_weigh_vars_unres_clauses_krn(Miracle *mrc) {
     Lidx neg_lidx;
     float weight_pos_lidx;
     float weight_neg_lidx;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < var_weights_lgth; gid += stride) {
-        if (!(mrc->var_ass[gid])) {
+        if (!(var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
             weight_pos_lidx = d_lit_weights[pos_lidx];
@@ -1403,18 +1395,23 @@ __global__ void compute_clause_sizes_krn(Miracle *mrc) {
     int c_size;     // Clause size.
     Lidx lidx;
     Var var;
+    int *clause_sat = mrc->clause_sat;
+    CNF_Formula *phi = mrc->phi;
+    int *phi_clause_indices = phi->clause_indices;
+    Lidx *phi_clauses = phi->clauses;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < clause_sizes_lgth; gid += stride) {
-        if (!(mrc->clause_sat[gid])) {
+        if (!(clause_sat[gid])) {
             c_size = 0;
 
-            for (int l = mrc->phi->clause_indices[gid];
-                 l < mrc->phi->clause_indices[gid+1];
+            for (int l = phi_clause_indices[gid];
+                 l < phi_clause_indices[gid+1];
                  l++) {
-                lidx = mrc->phi->clauses[l];
+                lidx = phi_clauses[l];
                 var = lidx_to_var(lidx);
 
-                if (!(mrc->var_ass[var])) {
+                if (!(var_ass[var])) {
                     c_size++;
                 }
             }
@@ -1433,17 +1430,22 @@ __global__ void count_lits_smallest_unres_clauses_krn(Miracle *mrc,
     int clause_sat_lgth = mrc->clause_sat_len;
     Lidx lidx;
     Var var;
+    int *clause_sat = mrc->clause_sat;
+    CNF_Formula *phi = mrc->phi;
+    int *phi_clause_indices = phi->clause_indices;
+    Lidx *phi_clauses = phi->clauses;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < clause_sat_lgth; gid += stride) {
-        if (!(mrc->clause_sat[gid]) &&
+        if (!(clause_sat[gid]) &&
             (d_clause_sizes[gid] == smallest_c_size)) {
-            for (int l = mrc->phi->clause_indices[gid];
-                 l < mrc->phi->clause_indices[gid+1];
+            for (int l = phi_clause_indices[gid];
+                 l < phi_clause_indices[gid+1];
                  l++) {
-                lidx = mrc->phi->clauses[l];
+                lidx = phi_clauses[l];
                 var = lidx_to_var(lidx);
 
-                if (!(mrc->var_ass[var])) {
+                if (!(var_ass[var])) {
                     atomicAdd(&(d_lit_occ[lidx]), 1);
                 }
             }
@@ -1462,17 +1464,19 @@ __global__ void POSIT_weigh_vars_smallest_unres_clauses_krn(Miracle *mrc,
     Lidx neg_lidx;
     int lc_s_pos_lidx;
     int lc_s_neg_lidx;
+    int *var_ass = mrc->var_ass;
+
+    int exp2_n = (int)(exp2f((float)n) + 0.5);
 
     for (; gid < var_weights_lgth; gid += stride) {
-        if (!(mrc->var_ass[gid])) {
+        if (!(var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
             lc_s_pos_lidx = d_lit_occ[pos_lidx];
             lc_s_neg_lidx = d_lit_occ[neg_lidx];
 
             d_var_weights[gid] = (float)
-                                 (lc_s_pos_lidx * lc_s_neg_lidx *
-                                  (int)(exp2f((float)n) + 0.5) +
+                                 (lc_s_pos_lidx * lc_s_neg_lidx * exp2_n +
                                   lc_s_pos_lidx + lc_s_neg_lidx);
         }
     }
@@ -1486,16 +1490,21 @@ __global__ void count_lits_unres_clauses_krn(Miracle *mrc) {
     int clause_sat_lgth = mrc->clause_sat_len;
     Lidx lidx;
     Var var;
+    int *clause_sat = mrc->clause_sat;
+    CNF_Formula *phi = mrc->phi;
+    int *phi_clause_indices = phi->clause_indices;
+    Lidx *phi_clauses = phi->clauses;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < clause_sat_lgth; gid += stride) {
-        if (!(mrc->clause_sat[gid])) {
-            for (int l = mrc->phi->clause_indices[gid];
-                 l < mrc->phi->clause_indices[gid+1];
+        if (!(clause_sat[gid])) {
+            for (int l = phi_clause_indices[gid];
+                 l < phi_clause_indices[gid+1];
                  l++) {
-                lidx = mrc->phi->clauses[l];
+                lidx = phi_clauses[l];
                 var = lidx_to_var(lidx);
 
-                if (!(mrc->var_ass[var])) {
+                if (!(var_ass[var])) {
                     atomicAdd(&(d_lit_occ[lidx]), 1);
                 }
             }
@@ -1511,9 +1520,10 @@ __global__ void count_vars_unres_clauses_krn(Miracle *mrc) {
     int var_occ_lgth = d_var_occ_len;
     Lidx pos_lidx;
     Lidx neg_lidx;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < var_occ_lgth; gid += stride) {
-        if (!(mrc->var_ass[gid])) {
+        if (!(var_ass[gid])) {
             pos_lidx = varpol_to_lidx(gid, true);
             neg_lidx = varpol_to_lidx(gid, false);
 
@@ -1528,9 +1538,10 @@ __global__ void init_var_availability_krn(Miracle *mrc) {
     int stride = blockDim.x * gridDim.x;
 
     int var_availability_lgth = d_var_availability_len;
+    int *var_ass = mrc->var_ass;
 
     for (; gid < var_availability_lgth; gid += stride) {
-        d_var_availability[gid] = mrc->var_ass[gid] ? INT_MAX : gid;
+        d_var_availability[gid] = var_ass[gid] ? INT_MAX : gid;
     }
 }
 
@@ -1559,14 +1570,17 @@ __global__ void count_lits_unres_clauses_same_size_krn(
     int c;
     Lidx lidx;
     Var var;
+    CNF_Formula *phi = mrc->phi;
+    int *phi_clause_indices = phi->clause_indices;
+    Lidx *phi_clauses = phi->clauses;
 
     for (; gid < num_clauses_same_size; gid += stride) {
         c = d_clause_idxs[cidx];
 
-        for (int l = mrc->phi->clause_indices[c];
-             l < mrc->phi->clause_indices[c+1];
+        for (int l = phi_clause_indices[c];
+             l < phi_clause_indices[c+1];
              l++) {
-            lidx = mrc->phi->clauses[l];
+            lidx = phi_clauses[l];
             var = lidx_to_var(lidx);
 
             if (d_var_availability[var] != INT_MAX) {

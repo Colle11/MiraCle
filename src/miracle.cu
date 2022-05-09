@@ -543,6 +543,8 @@ Lit mrc_POSIT_heuristic(sat_miracle *sat_mrc, const int n) {
         }
     }
 
+    int exp2_n = (int)(exp2f((float)n) + 0.5);
+
     for (int c = 0; c < num_clauses; c++) {
         if (!(clause_sat[c]) && clause_sizes[c] == smallest_c_size) {
             for (int l = phi_clause_indices[c];
@@ -559,8 +561,7 @@ Lit mrc_POSIT_heuristic(sat_miracle *sat_mrc, const int n) {
                     neg_lidx = varpol_to_lidx(var, false);
                     lc_min_pos_lidx = lit_occ[pos_lidx];
                     lc_min_neg_lidx = lit_occ[neg_lidx];
-                    weight = lc_min_pos_lidx * lc_min_neg_lidx *
-                             (int)(exp2f((float)n) + 0.5) +
+                    weight = lc_min_pos_lidx * lc_min_neg_lidx * exp2_n +
                              lc_min_pos_lidx + lc_min_neg_lidx;
                     
                     if (weight > greatest_weight

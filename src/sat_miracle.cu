@@ -11,6 +11,7 @@
 
 
 #include "sat_miracle.cuh"
+#include "launch_parameters_gpu.cuh"
 
 
 /**
@@ -31,6 +32,12 @@ SAT_Miracle *mrc_create_sat_miracle(char *filename, bool gpu) {
     sat_mrc->mrc = mrc;
     sat_mrc->d_mrc = d_mrc;
 
+    CNF_Formula *phi = mrc->phi;
+
+    sat_mrc->num_blks_num_vars = gpu_num_blocks(phi->num_vars);
+    sat_mrc->num_blks_num_clauses = gpu_num_blocks(phi->num_clauses);
+    sat_mrc->num_thds_per_blk = gpu_num_threads_per_block();
+
     return sat_mrc;
 }
 
@@ -43,7 +50,17 @@ void mrc_destroy_sat_miracle(SAT_Miracle *sat_mrc) {
 
 
 void mrc_print_sat_miracle(SAT_Miracle *sat_mrc) {
+    printf("*** SAT MiraCle ***\n\n");
+
     mrc_print_miracle(sat_mrc->mrc);
+
+    printf("Number of blocks per kernel launch based on the number of "
+           "variables: %d\n", sat_mrc->num_blks_num_vars);
+    printf("Number of blocks per kernel launch based on the number of "
+           "clauses: %d\n", sat_mrc->num_blks_num_clauses);
+    printf("Number of threads per block: %d\n", sat_mrc->num_thds_per_blk);
+
+    printf("\n*** End SAT MiraCle ***\n\n");
 }
 
 

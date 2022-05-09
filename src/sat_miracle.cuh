@@ -20,8 +20,18 @@
  * @brief SAT_Miracle data type.
  */
 typedef struct sat_miracle {
-    Miracle *mrc;       // Host miracle.
-    Miracle *d_mrc;     // Device miracle.
+    Miracle *mrc;               // Host miracle.
+    Miracle *d_mrc;             // Device miracle.
+
+    int num_blks_num_vars;      /**
+                                 * Number of blocks per kernel launch based on
+                                 * the number of variables.
+                                 */
+    int num_blks_num_clauses;   /**
+                                 * Number of blocks per kernel launch based on
+                                 * the number of clauses.
+                                 */
+    int num_thds_per_blk;       // Number of threads per block.
 } SAT_Miracle;
 
 

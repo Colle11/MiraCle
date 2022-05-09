@@ -48,6 +48,8 @@ int main(int argc, char *argv[]) {
 
     SAT_Miracle *sat_mrc = mrc_create_sat_miracle(filename, true);
 
+    mrc_print_sat_miracle(sat_mrc);
+
     mrc_assign_lits(lits, lits_len, sat_mrc);
 
     Lit RAND_blit = mrc_RAND_heuristic(sat_mrc);
@@ -84,31 +86,31 @@ int main(int argc, char *argv[]) {
     printf("**************************************************************\n");
     printf("\n");
 
-    // Miracle_Dyn *mrc_dyn = mrc_dyn_create_miracle(filename);
+    Miracle_Dyn *mrc_dyn = mrc_dyn_create_miracle(filename);
     
-    // mrc_dyn_assign_lits(lits, lits_len, mrc_dyn);
+    mrc_dyn_assign_lits(lits, lits_len, mrc_dyn);
     
-    // Lit RAND_blit_dyn = mrc_dyn_RAND_heuristic(mrc_dyn);
-    // Lit JW_OS_blit_dyn = mrc_dyn_JW_OS_heuristic(mrc_dyn);
-    // Lit JW_TS_blit_dyn = mrc_dyn_JW_TS_heuristic(mrc_dyn);
-    // Lit BOHM_blit_dyn = mrc_dyn_BOHM_heuristic(mrc_dyn, BOHM_alpha, BOHM_beta);
-    // Lit POSIT_blit_dyn = mrc_dyn_POSIT_heuristic(mrc_dyn, POSIT_n);
-    // Lit DLIS_blit_dyn = mrc_dyn_DLIS_heuristic(mrc_dyn);
-    // Lit DLCS_blit_dyn = mrc_dyn_DLCS_heuristic(mrc_dyn);
-    // Lit RDLIS_blit_dyn = mrc_dyn_RDLIS_heuristic(mrc_dyn);
-    // Lit RDLCS_blit_dyn = mrc_dyn_RDLCS_heuristic(mrc_dyn);
+    Lit RAND_blit_dyn = mrc_dyn_RAND_heuristic(mrc_dyn);
+    Lit JW_OS_blit_dyn = mrc_dyn_JW_OS_heuristic(mrc_dyn);
+    Lit JW_TS_blit_dyn = mrc_dyn_JW_TS_heuristic(mrc_dyn);
+    Lit BOHM_blit_dyn = mrc_dyn_BOHM_heuristic(mrc_dyn, BOHM_alpha, BOHM_beta);
+    Lit POSIT_blit_dyn = mrc_dyn_POSIT_heuristic(mrc_dyn, POSIT_n);
+    Lit DLIS_blit_dyn = mrc_dyn_DLIS_heuristic(mrc_dyn);
+    Lit DLCS_blit_dyn = mrc_dyn_DLCS_heuristic(mrc_dyn);
+    Lit RDLIS_blit_dyn = mrc_dyn_RDLIS_heuristic(mrc_dyn);
+    Lit RDLCS_blit_dyn = mrc_dyn_RDLCS_heuristic(mrc_dyn);
     
-    // printf("RAND branching literal dynamic = %d\n", RAND_blit_dyn);
-    // printf("JW-OS branching literal dynamic = %d\n", JW_OS_blit_dyn);
-    // printf("JW-TS branching literal dynamic = %d\n", JW_TS_blit_dyn);
-    // printf("BOHM branching literal dynamic = %d\n", BOHM_blit_dyn);
-    // printf("POSIT branching literal dynamic = %d\n", POSIT_blit_dyn);
-    // printf("DLIS branching literal dynamic = %d\n", DLIS_blit_dyn);
-    // printf("DLCS branching literal dynamic = %d\n", DLCS_blit_dyn);
-    // printf("RDLIS branching literal dynamic = %d\n", RDLIS_blit_dyn);
-    // printf("RDLCS branching literal dynamic = %d\n", RDLCS_blit_dyn);
+    printf("RAND branching literal dynamic = %d\n", RAND_blit_dyn);
+    printf("JW-OS branching literal dynamic = %d\n", JW_OS_blit_dyn);
+    printf("JW-TS branching literal dynamic = %d\n", JW_TS_blit_dyn);
+    printf("BOHM branching literal dynamic = %d\n", BOHM_blit_dyn);
+    printf("POSIT branching literal dynamic = %d\n", POSIT_blit_dyn);
+    printf("DLIS branching literal dynamic = %d\n", DLIS_blit_dyn);
+    printf("DLCS branching literal dynamic = %d\n", DLCS_blit_dyn);
+    printf("RDLIS branching literal dynamic = %d\n", RDLIS_blit_dyn);
+    printf("RDLCS branching literal dynamic = %d\n", RDLCS_blit_dyn);
     
-    // mrc_dyn_destroy_miracle(mrc_dyn);
+    mrc_dyn_destroy_miracle(mrc_dyn);
 
     printf("\n");
     printf("**************************************************************\n");
